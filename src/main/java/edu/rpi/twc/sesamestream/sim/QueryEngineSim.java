@@ -61,7 +61,7 @@ public class QueryEngineSim {
     }
 
     private class PartialSolutionSim implements Comparable<PartialSolutionSim> {
-        private final long expirationTime;
+        private final long expirationTime = 0; // FIXME
         private final List<TriplePatternSim> graphPattern;
 
         public PartialSolutionSim(final int size,

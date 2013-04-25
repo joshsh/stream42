@@ -52,6 +52,8 @@ public class QueryEngine {
 
     private boolean logHasChanged = false;
 
+    private long timeCurrentOperationBegan;
+
     private final Counter
             countQueries = new Counter(),
             countTriplePatterns = new Counter(),
@@ -117,6 +119,7 @@ public class QueryEngine {
     public void addQuery(final TupleExpr t,
                          final BindingSetHandler h) throws Query.IncompatibleQueryException {
         increment(countQueries, true);
+        timeCurrentOperationBegan = System.currentTimeMillis();
         //System.out.println("query:\t" + t);
 
         Query q = new Query(t, deduplicator);
@@ -150,6 +153,7 @@ public class QueryEngine {
      */
     public void addStatement(final Statement s) {
         increment(countStatements, false);
+        timeCurrentOperationBegan = System.currentTimeMillis();
         //System.out.println("statement:\t" + s);
 
         index.match(toVarList(s), s, binder);
@@ -318,7 +322,7 @@ public class QueryEngine {
     private void logEntry() {
         if (SesameStream.PERFORMANCE_METRICS) {
             if (!COMPACT_LOG_FORMAT || logHasChanged) {
-                System.out.println("LOG\t" + System.currentTimeMillis()
+                System.out.println("LOG\t" + timeCurrentOperationBegan
                         + "," + countQueries.getCount()
                         + "," + countStatements.getCount()
                         + "," + countTriplePatterns.getCount()
@@ -353,7 +357,8 @@ public class QueryEngine {
     private void handleSolution(final BindingSetHandler handler,
                                 final BindingSet solution) {
         increment(countSolutions, true);
-        System.out.println("SOLUTION:\t" + QueryEngine.toString(solution));
+        System.out.println("SOLUTION\t" + System.currentTimeMillis() + "\t"
+                + QueryEngine.toString(solution));
 
         handler.handle(solution);
     }
