@@ -64,23 +64,23 @@ public class TripleIndex {
         if (list.isNil()) {
             //System.out.println("matching nil list for statement " + st);
             if (null != partialSolutions) {
-                VarList bindings = VarList.NIL;
+                VarList newBindings = VarList.NIL;
 
                 for (PartialSolution ps : partialSolutions) {
                     for (TriplePattern p : ps.getGraphPattern()) {
                         if (!p.getSubject().hasValue()) {
-                            bindings = new VarList(p.getSubject().getName(), st.getSubject(), bindings);
+                            newBindings = new VarList(p.getSubject().getName(), st.getSubject(), newBindings);
                         }
 
                         if (!p.getPredicate().hasValue()) {
-                            bindings = new VarList(p.getPredicate().getName(), st.getPredicate(), bindings);
+                            newBindings = new VarList(p.getPredicate().getName(), st.getPredicate(), newBindings);
                         }
 
                         if (!p.getObject().hasValue()) {
-                            bindings = new VarList(p.getObject().getName(), st.getObject(), bindings);
+                            newBindings = new VarList(p.getObject().getName(), st.getObject(), newBindings);
                         }
 
-                        handler.bind(ps, p, bindings);
+                        handler.bind(ps, p, newBindings);
                     }
                 }
             }

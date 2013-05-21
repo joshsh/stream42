@@ -92,11 +92,11 @@ public class QueryEngine {
         logHeader();
     }
 
-    private void addIntermediateResult(final PartialSolution q) {
+    private void addIntermediateResult(final PartialSolution ps) {
         increment(countIntermediateResults, true);
         //System.out.println("intermediate result:\t" + q);
 
-        intermediateResultBuffer.add(q);
+        intermediateResultBuffer.add(ps);
     }
 
     private void flushIntermediateResults() {
@@ -215,20 +215,20 @@ public class QueryEngine {
         */
     }
 
-    public void bindSolution(final PartialSolution r,
+    public void bindSolution(final PartialSolution ps,
                      final TriplePattern satisfiedPattern,
                      final VarList newBindings) {
         //System.out.println("triple pattern satisfied: " + satisfiedPattern + " with bindings " + newBindings);
-        if (1 == r.getGraphPattern().size()) {
+        if (1 == ps.getGraphPattern().size()) {
             //System.out.println("producing solution: " + newBindings);
-            produceSolution(r, r.getBindings().prepend(newBindings));
+            produceSolution(ps, ps.getBindings().prepend(newBindings));
         } else {
             //System.out.println("creating new query");
             Set<TriplePattern> nextPatterns = new HashSet<TriplePattern>();
 
-            VarList nextBindings = r.getBindings().prepend(newBindings);
+            VarList nextBindings = ps.getBindings().prepend(newBindings);
 
-            for (TriplePattern t : r.getGraphPattern()) {
+            for (TriplePattern t : ps.getGraphPattern()) {
                 // Note: comparison with == is appropriate here thanks to deduplication of triple patterns
                 if (t != satisfiedPattern) {
                     TriplePattern p = replace(t, newBindings);
@@ -241,10 +241,8 @@ public class QueryEngine {
                 }
             }
 
-            PartialSolution nextQuery
-                    = new PartialSolution(r.getSubscription(), nextPatterns, nextBindings);
-
-            addIntermediateResult(nextQuery);
+            addIntermediateResult(
+                    new PartialSolution(ps.getSubscription(), nextPatterns, nextBindings));
         }
     }
 
@@ -323,6 +321,7 @@ public class QueryEngine {
         if (SesameStream.PERFORMANCE_METRICS) {
             if (!COMPACT_LOG_FORMAT || logHasChanged) {
                 System.out.println("LOG\t" + timeCurrentOperationBegan
+                        + "," + System.currentTimeMillis()
                         + "," + countQueries.getCount()
                         + "," + countStatements.getCount()
                         + "," + countTriplePatterns.getCount()
