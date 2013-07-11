@@ -72,6 +72,14 @@ public class QueryEngine {
         clear();
     }
 
+    public void visitPartialSolutions(final Visitor<PartialSolution> v) {
+        index.visitPartialSolutions(v);
+    }
+
+    public void printIndex() {
+        index.print();
+    }
+
     /**
      * Removes all queries, statements, and intermediate results.
      */
@@ -192,7 +200,7 @@ public class QueryEngine {
         //System.out.println("binding...\t" + p + " -- " + q);
 
         VarList l = toVarList(p);
-        index.index(l, q);
+        index.index(p, l, q);
 
         /*
         Collection<PartialSolution> queries = oldIndex.get(p);
@@ -260,7 +268,7 @@ public class QueryEngine {
                 }
                 b.addBinding(n, cur.getValue());
             }
-            cur = cur.getNext();
+            cur = cur.getRest();
         }
 
         handleSolution(r.getSubscription().getHandler(), b);
@@ -293,7 +301,7 @@ public class QueryEngine {
                 changed = true;
             }
 
-            cur = cur.getNext();
+            cur = cur.getRest();
         }
 
         return changed
@@ -313,7 +321,7 @@ public class QueryEngine {
 
     private void logHeader() {
         if (SesameStream.PERFORMANCE_METRICS) {
-            System.out.println("LOG\ttime,queries,statements,patterns,intermediate,solutions,indexTriplePatternOps,bindingOps,replaceOps");
+            System.out.println("LOG\ttime1,time2,queries,statements,patterns,intermediate,solutions,indexTriplePatternOps,bindingOps,replaceOps");
         }
     }
 

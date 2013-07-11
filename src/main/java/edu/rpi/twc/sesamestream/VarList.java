@@ -12,22 +12,43 @@ public class VarList {
 
     private final String name;
     private final Value value;
-    private final VarList next;
+    private final VarList rest;
 
     private VarList() {
         name = null;
         value = null;
-        next = null;
+        rest = null;
     }
 
-    public VarList(String name, Value value, VarList next) {
+    public VarList(final String name,
+                   final Value value,
+                   final VarList rest) {
         this.name = name;
         this.value = value;
-        this.next = next;
+        this.rest = rest;
+
+        if (SesameStream.DEBUG) {
+            checkForDuplicateName(name);
+        }
+    }
+
+    private void checkForDuplicateName(final String name) {
+        if (null == name) {
+            return;
+        }
+
+        VarList cur = this.getRest();
+        while (!cur.isNil()) {
+            if (name.equals(cur.getName())) {
+                throw new IllegalStateException("duplicate name '" + name + "' in VarList: " + this);
+            }
+
+            cur = cur.rest;
+        }
     }
 
     public boolean isNil() {
-        return next == null;
+        return rest == null;
     }
 
     public String getName() {
@@ -38,8 +59,8 @@ public class VarList {
         return value;
     }
 
-    public VarList getNext() {
-        return next;
+    public VarList getRest() {
+        return rest;
     }
 
     public Var asVar() {
@@ -52,7 +73,7 @@ public class VarList {
 
         while (!cur2.isNil()) {
             cur1 = new VarList(cur2.name, cur2.value, cur1);
-            cur2 = cur2.next;
+            cur2 = cur2.rest;
         }
 
         return cur1;
@@ -63,7 +84,7 @@ public class VarList {
         int l = 0;
         while (cur != null) {
             l++;
-            cur = cur.next;
+            cur = cur.rest;
         }
 
         return l;
@@ -83,7 +104,7 @@ public class VarList {
 
             sb.append(cur.name).append(":").append(cur.value);
 
-            cur = cur.next;
+            cur = cur.rest;
         }
         sb.append(")");
         return sb.toString();

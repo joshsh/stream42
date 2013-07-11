@@ -8,6 +8,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.openrdf.model.Statement;
+import org.openrdf.model.URI;
+import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.algebra.TupleExpr;
@@ -38,6 +41,7 @@ public class QueryEngineTest {
     private QueryParser queryParser = new SPARQLParser();
     private Sail sail;
     private QueryEngine queryEngine;
+    private ValueFactory vf = new ValueFactoryImpl();
 
     @Before
     public void setUp() throws Exception {
@@ -50,6 +54,45 @@ public class QueryEngineTest {
     @After
     public void tearDown() throws Exception {
         sail.shutDown();
+    }
+
+    @Test
+    public void testManually() throws Exception {
+        String ex = "http://example.org/";
+        String foaf = "http://xmlns.com/foaf/0.1/";
+        URI arthur = vf.createURI(ex + "arthur");
+        URI zaphod = vf.createURI(ex + "zaphod");
+        URI ford = vf.createURI(ex + "ford");
+        URI knows = vf.createURI(foaf + "knows");
+
+        TupleExpr q = loadQuery("simple-join-in.rq");
+
+        BindingSetHandler h = new BindingSetHandler() {
+            public void handle(BindingSet result) {
+                System.out.println("result: " + result);
+            }
+        };
+
+        System.out.println("########## a");
+
+        queryEngine.printIndex();
+
+        System.out.println("########## s");
+
+        queryEngine.addQuery(q, h);
+        queryEngine.printIndex();
+
+        System.out.println("########## d");
+
+        queryEngine.addStatement(vf.createStatement(arthur, knows, zaphod));
+        queryEngine.printIndex();
+
+        System.out.println("########## f");
+
+        queryEngine.addStatement(vf.createStatement(zaphod, knows, ford));
+        queryEngine.printIndex();
+
+        System.out.println("########## g");
     }
 
     @Test
@@ -107,10 +150,10 @@ public class QueryEngineTest {
     }
 
     @Test
-    public void testTmp() throws Exception {
+    public void testCircleJoin() throws Exception {
         compareAnswers(
-                loadData("universe.ttl"),
-                loadQuery("universe-joins-1.rq"));
+                loadData("example.nq"),
+                loadQuery("circle-join.rq"));
     }
 
     private TupleExpr loadQuery(final String fileName) throws Exception {
