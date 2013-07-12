@@ -7,8 +7,6 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -17,7 +15,7 @@ import java.util.Map;
 public class TripleIndex {
 
     // the "leaves" of this index
-    private List<PartialSolutionWrapper> partialSolutions;
+    private LList<PartialSolutionWrapper> partialSolutions;
 
     // child indices matching specific values
     private Map<Value, TripleIndex> valueIndices;
@@ -35,9 +33,9 @@ public class TripleIndex {
         if (null == list) {
             //System.out.println("indexing nil list to " + ps);
             if (null == partialSolutions) {
-                partialSolutions = new LinkedList<PartialSolutionWrapper>();
+                partialSolutions = LList.NIL;
             }
-            partialSolutions.add(new PartialSolutionWrapper(p, ps));
+            partialSolutions = partialSolutions.push(new PartialSolutionWrapper(p, ps));
         } else {
             Value v = list.getValue();
 
@@ -74,7 +72,9 @@ public class TripleIndex {
             //System.out.println("matching nil list for statement " + st);
             if (null != partialSolutions) {
 
-                for (PartialSolutionWrapper ps : partialSolutions) {
+                LList<PartialSolutionWrapper> cur = partialSolutions;
+                while (!cur.isNil()) {
+                    PartialSolutionWrapper ps = cur.getValue();
                     VarList newBindings = null;
 
                     //System.out.println("\t" + ps.partialSolution);
@@ -96,6 +96,7 @@ public class TripleIndex {
                     }
 
                     handler.bind(ps.partialSolution, p, newBindings);
+                    cur = cur.getRest();
                 }
             }
         } else {
@@ -119,10 +120,12 @@ public class TripleIndex {
 
     public boolean visitPartialSolutions(final Visitor<PartialSolution> v) {
         if (null != partialSolutions) {
-            for (PartialSolutionWrapper ps : partialSolutions) {
-                if (!v.visit(ps.partialSolution)) {
+            LList<PartialSolutionWrapper> cur = partialSolutions;
+            while (!cur.isNil()) {
+                if (!v.visit(cur.getValue().partialSolution)) {
                     return false;
                 }
+                cur = cur.getRest();
             }
         }
 
@@ -150,8 +153,10 @@ public class TripleIndex {
     private void printInternal(String heading) {
         if (null != partialSolutions) {
             System.out.println(heading + ":");
-            for (PartialSolutionWrapper ps : partialSolutions) {
-                System.out.println("\t" + ps.partialSolution);
+            LList<PartialSolutionWrapper> cur = partialSolutions;
+            while (!cur.isNil()) {
+                System.out.println("\t" + cur.getValue().partialSolution);
+                cur = cur.getRest();
             }
         } else {
             if (null != wildcardIndex) {

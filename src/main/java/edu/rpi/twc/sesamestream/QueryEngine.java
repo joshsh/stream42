@@ -38,8 +38,6 @@ import java.util.logging.Logger;
 public class QueryEngine {
     private static final Logger LOGGER = Logger.getLogger(QueryEngine.class.getName());
 
-    private static final boolean COMPACT_LOG_FORMAT = true;
-
     //private final Map<TriplePattern, Collection<PartialSolution>> oldIndex;
     private final TripleIndex index;
 
@@ -369,7 +367,7 @@ public class QueryEngine {
 
     private void logEntry() {
         if (SesameStream.PERFORMANCE_METRICS) {
-            if (!COMPACT_LOG_FORMAT || logHasChanged) {
+            if (!SesameStream.COMPACT_LOG_FORMAT || logHasChanged) {
                 System.out.println("LOG\t" + timeCurrentOperationBegan
                         + "," + System.currentTimeMillis()
                         + "," + countQueries.getCount()
