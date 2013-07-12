@@ -163,11 +163,11 @@ public class QueryEngine {
      */
     public void addStatement(final Statement s) {
         if (mutex) {
-            System.out.println("queueing statement: " + s);
+            //System.out.println("queueing statement: " + s);
             statementBuffer.add(s);
         } else {
             mutexUp();
-            System.out.println("adding statement: " + s);
+            //System.out.println("adding statement: " + s);
 
             increment(countStatements, false);
             timeCurrentOperationBegan = System.currentTimeMillis();
