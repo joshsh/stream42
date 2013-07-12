@@ -179,6 +179,7 @@ public class TripleIndex {
         }
     }
 
+    // A wrapper which associates a PartialSolution with the TriplePattern under which it is indexed
     private class PartialSolutionWrapper {
         public final TriplePattern triplePattern;
         public final PartialSolution partialSolution;

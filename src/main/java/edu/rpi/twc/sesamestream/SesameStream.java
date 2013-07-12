@@ -5,5 +5,5 @@ package edu.rpi.twc.sesamestream;
  */
 public class SesameStream {
     public static final boolean PERFORMANCE_METRICS = true;
-    public static boolean DEBUG = true;
+    public static boolean DEBUG = false;
 }

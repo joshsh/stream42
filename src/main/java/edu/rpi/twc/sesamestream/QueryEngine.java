@@ -1,10 +1,18 @@
 package edu.rpi.twc.sesamestream;
 
+import net.fortytwo.linkeddata.CacheEntry;
+import net.fortytwo.linkeddata.LinkedDataCache;
+import net.fortytwo.ripple.RippleException;
 import org.openrdf.model.Statement;
+import org.openrdf.model.URI;
+import org.openrdf.model.Value;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.impl.MapBindingSet;
+import org.openrdf.sail.Sail;
+import org.openrdf.sail.SailConnection;
+import org.openrdf.sail.SailException;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,6 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
@@ -29,6 +38,8 @@ import java.util.Set;
  *         10) a statement will never match more than one triple pattern, per query, at a time
  */
 public class QueryEngine {
+    private static final Logger LOGGER = Logger.getLogger(QueryEngine.class.getName());
+
     private static final boolean COMPACT_LOG_FORMAT = true;
 
     //private final Map<TriplePattern, Collection<PartialSolution>> oldIndex;
@@ -36,9 +47,16 @@ public class QueryEngine {
 
     private final List<PartialSolution> intermediateResultBuffer = new LinkedList<PartialSolution>();
 
+    // A buffer for statements added as the result of adding other statements (e.g. in response to Linked Data fetches)
+    // This avoids concurrent modification exceptions.
+    private final List<Statement> statementBuffer = new LinkedList<Statement>();
+
     // TODO: this is a bit of a hack, and a waste of space
     private final Map<TriplePattern, TriplePattern> uniquePatterns;
     private final TriplePatternDeduplicator deduplicator;
+
+    private LinkedDataCache linkedDataCache;
+    private SailConnection linkedDataCacheConnection;
 
     private final SolutionBinder binder = new SolutionBinder() {
         public void bind(final PartialSolution ps,
@@ -72,6 +90,13 @@ public class QueryEngine {
         clear();
     }
 
+    public void setLinkedDataCache(final LinkedDataCache cache,
+                                   final Sail sail) throws SailException {
+        this.linkedDataCache = cache;
+        this.linkedDataCache.setAutoCommit(true);
+        this.linkedDataCacheConnection = sail.getConnection();
+    }
+
     public void visitPartialSolutions(final Visitor<PartialSolution> v) {
         index.visitPartialSolutions(v);
     }
@@ -100,6 +125,80 @@ public class QueryEngine {
         logHeader();
     }
 
+    /**
+     * Adds a new query (subscription) to this query engine
+     *
+     * @param t the query to add
+     * @param h a handler for eventual results of the query
+     * @throws Query.IncompatibleQueryException
+     *          if the syntax of the query is not supported by this engine
+     */
+    public void addQuery(final TupleExpr t,
+                         final BindingSetHandler h) throws Query.IncompatibleQueryException {
+        mutexUp();
+
+        increment(countQueries, true);
+        timeCurrentOperationBegan = System.currentTimeMillis();
+        //System.out.println("query:\t" + t);
+
+        Query q = new Query(t, deduplicator);
+
+        Subscription s = new Subscription(q, h);
+
+        PartialSolution query = new PartialSolution(s);
+        addIntermediateResult(query);
+        flushIntermediateResults();
+
+        logEntry();
+
+        mutexDown();
+    }
+
+    /**
+     * Adds a new statement to this query engine.
+     * Depending on the queries registered with this engine,
+     * the statement will either be discarded as irrelevant to the queries,
+     * trigger the creation of intermediate query results which are stored in anticipation of further statements,
+     * or trigger the production final query results
+     *
+     * @param s the statement to add
+     */
+    public void addStatement(final Statement s) {
+        if (mutex) {
+            System.out.println("queueing statement: " + s);
+            statementBuffer.add(s);
+        } else {
+            mutexUp();
+            System.out.println("adding statement: " + s);
+
+            increment(countStatements, false);
+            timeCurrentOperationBegan = System.currentTimeMillis();
+            //System.out.println("statement:\t" + s);
+
+            index.match(toVarList(s), s, binder);
+
+            flushIntermediateResults();
+
+            logEntry();
+
+            mutexDown();
+        }
+    }
+
+    private boolean mutex;
+
+    private void mutexUp() {
+        mutex = true;
+    }
+
+    private void mutexDown() {
+        mutex = false;
+
+        if (statementBuffer.size() > 0) {
+            addStatement(statementBuffer.remove(0));
+        }
+    }
+
     private void addIntermediateResult(final PartialSolution ps) {
         increment(countIntermediateResults, true);
         //System.out.println("intermediate result:\t" + q);
@@ -116,31 +215,6 @@ public class QueryEngine {
         intermediateResultBuffer.clear();
     }
 
-    /**
-     * Adds a new query (subscription) to this query engine
-     *
-     * @param t the query to add
-     * @param h a handler for eventual results of the query
-     * @throws Query.IncompatibleQueryException
-     *          if the syntax of the query is not supported by this engine
-     */
-    public void addQuery(final TupleExpr t,
-                         final BindingSetHandler h) throws Query.IncompatibleQueryException {
-        increment(countQueries, true);
-        timeCurrentOperationBegan = System.currentTimeMillis();
-        //System.out.println("query:\t" + t);
-
-        Query q = new Query(t, deduplicator);
-
-        Subscription s = new Subscription(q, h);
-
-        PartialSolution query = new PartialSolution(s);
-        addIntermediateResult(query);
-        flushIntermediateResults();
-
-        logEntry();
-    }
-
     private VarList toVarList(final Statement s) {
         VarList l = VarList.NIL;
 
@@ -148,41 +222,6 @@ public class QueryEngine {
         l = new VarList(null, s.getPredicate(), l);
         l = new VarList(null, s.getSubject(), l);
         return l;
-    }
-
-    /**
-     * Adds a new statement to this query engine.
-     * Depending on the queries registered with this engine,
-     * the statement will either be discarded as irrelevant to the queries,
-     * trigger the creation of intermediate query results which are stored in anticipation of further statements,
-     * or trigger the production final query results
-     *
-     * @param s the statement to add
-     */
-    public void addStatement(final Statement s) {
-        increment(countStatements, false);
-        timeCurrentOperationBegan = System.currentTimeMillis();
-        //System.out.println("statement:\t" + s);
-
-        index.match(toVarList(s), s, binder);
-
-        /*
-        // TODO: replace this linear search with something more efficient
-        for (TriplePattern p : oldIndex.keySet()) {
-            VarList l = applyTo(p, s);
-
-            if (null != l) {
-                for (PartialSolution q : oldIndex.get(p)) {
-                    //System.out.println("handling match " + bindings + " of " + p + " in " + q);
-                    bind(q, p, l);
-                }
-            }
-        }
-        */
-
-        flushIntermediateResults();
-
-        logEntry();
     }
 
     private VarList toVarList(TriplePattern p) {
@@ -197,35 +236,34 @@ public class QueryEngine {
                                     final PartialSolution q) {
         increment(countIndexTriplePatternOps, false);
 
-        //System.out.println("binding...\t" + p + " -- " + q);
-
         VarList l = toVarList(p);
         index.index(p, l, q);
 
-        /*
-        Collection<PartialSolution> queries = oldIndex.get(p);
-        if (null == queries) {
-            increment(countTriplePatterns, true);
-            //System.out.println("triple pattern:\t" + p);
+        if (null != linkedDataCache) {
+            Value s = p.getSubject().getValue();
+            Value o = p.getObject().getValue();
 
-            queries = new LinkedList<PartialSolution>();
-            oldIndex.put(p, queries);
+            try {
+                if (null != s && s instanceof URI) {
+                    System.out.println("looking up subject: " + s);
+                    CacheEntry.Status status = linkedDataCache.retrieveUri((URI) s, linkedDataCacheConnection);
+                    System.out.println("\t" + status);
+                }
 
-            // This is necessarily a unique triple pattern
-            uniquePatterns.put(p, p);
+                if (null != o && o instanceof URI) {
+                    System.out.println("looking up object: " + o);
+                    linkedDataCache.retrieveUri((URI) o, linkedDataCacheConnection);
+                }
+            } catch (RippleException e) {
+                LOGGER.severe(e.getMessage());
+                e.printStackTrace();
+            }
         }
-
-        queries.add(q);
-
-        //for (TriplePattern t : index.keySet()) {
-        //    System.out.println("\t" + index.get(t).size() + " -- " + t);
-        //}
-        */
     }
 
     public void bindSolution(final PartialSolution ps,
-                     final TriplePattern satisfiedPattern,
-                     final VarList newBindings) {
+                             final TriplePattern satisfiedPattern,
+                             final VarList newBindings) {
         //System.out.println("triple pattern satisfied: " + satisfiedPattern + " with bindings " + newBindings);
         if (1 == ps.getGraphPattern().size()) {
             //System.out.println("producing solution: " + newBindings);

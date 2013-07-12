@@ -36,12 +36,12 @@ import static org.junit.Assert.assertTrue;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class QueryEngineTest {
-    private static final String BASE_URI = "http://example.org/base/";
+    protected static final String BASE_URI = "http://example.org/base/";
 
-    private QueryParser queryParser = new SPARQLParser();
-    private Sail sail;
-    private QueryEngine queryEngine;
-    private ValueFactory vf = new ValueFactoryImpl();
+    protected QueryParser queryParser = new SPARQLParser();
+    protected Sail sail;
+    protected QueryEngine queryEngine;
+    protected ValueFactory vf = new ValueFactoryImpl();
 
     @Before
     public void setUp() throws Exception {
@@ -156,7 +156,7 @@ public class QueryEngineTest {
                 loadQuery("circle-join.rq"));
     }
 
-    private TupleExpr loadQuery(final String fileName) throws Exception {
+    protected TupleExpr loadQuery(final String fileName) throws Exception {
         InputStream in = SesameStream.class.getResourceAsStream(fileName);
         String query = IOUtil.readString(in);
         in.close();
@@ -166,7 +166,7 @@ public class QueryEngineTest {
         return pq.getTupleExpr();
     }
 
-    private List<Statement> loadData(final String fileName) throws Exception {
+    protected List<Statement> loadData(final String fileName) throws Exception {
         RDFParser p;
         if (fileName.endsWith("nq")) {
             p = new NQuadsParser();
@@ -186,8 +186,8 @@ public class QueryEngineTest {
         return c.getStatements();
     }
 
-    private void compareAnswers(final List<Statement> data,
-                                final TupleExpr... queries) throws Exception {
+    protected void compareAnswers(final List<Statement> data,
+                                  final TupleExpr... queries) throws Exception {
         Set<BindingSet>[] staticResults = staticQueryAnswers(data, queries);
         Set<BindingSet>[] contResults = continuousQueryAnswers(data, queries);
 
@@ -205,8 +205,8 @@ public class QueryEngineTest {
         }
     }
 
-    private Set<BindingSet>[] staticQueryAnswers(final List<Statement> data,
-                                                 final TupleExpr... queries) throws Exception {
+    protected Set<BindingSet>[] staticQueryAnswers(final List<Statement> data,
+                                                   final TupleExpr... queries) throws Exception {
         Set<BindingSet>[] answers = new Set[queries.length];
 
         int i = 0;
@@ -240,8 +240,8 @@ public class QueryEngineTest {
         return answers;
     }
 
-    private Set<BindingSet>[] continuousQueryAnswers(final List<Statement> data,
-                                                     final TupleExpr... queries) throws Exception {
+    protected Set<BindingSet>[] continuousQueryAnswers(final List<Statement> data,
+                                                       final TupleExpr... queries) throws Exception {
         final Set<BindingSet>[] answers = new Set[queries.length];
 
         queryEngine.clear();

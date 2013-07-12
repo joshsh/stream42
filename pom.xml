@@ -32,6 +32,7 @@
         <junit.version>4.5</junit.version>
         <sesame.version>2.6.9</sesame.version>
         <sesametools.version>1.7-SNAPSHOT</sesametools.version>
+        <ripple.version>1.1-SNAPSHOT</ripple.version>
     </properties>
 
     <dependencies>
@@ -45,6 +46,11 @@
             <artifactId>sesame-sail-memory</artifactId>
             <version>${sesame.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.fortytwo</groupId>
+            <artifactId>linked-data-sail</artifactId>
+            <version>${ripple.version}</version>
         </dependency>
         <dependency>
             <groupId>net.fortytwo.sesametools</groupId>
