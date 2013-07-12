@@ -8,17 +8,9 @@ import org.openrdf.query.algebra.Var;
  */
 public class VarList {
 
-    public static final VarList NIL = new VarList();
-
     private final String name;
     private final Value value;
     private final VarList rest;
-
-    private VarList() {
-        name = null;
-        value = null;
-        rest = null;
-    }
 
     public VarList(final String name,
                    final Value value,
@@ -38,17 +30,13 @@ public class VarList {
         }
 
         VarList cur = this.getRest();
-        while (!cur.isNil()) {
+        while (null != cur) {
             if (name.equals(cur.getName())) {
                 throw new IllegalStateException("duplicate name '" + name + "' in VarList: " + this);
             }
 
             cur = cur.rest;
         }
-    }
-
-    public boolean isNil() {
-        return rest == null;
     }
 
     public String getName() {
@@ -67,11 +55,12 @@ public class VarList {
         return new Var(name, value);
     }
 
-    public VarList prepend(final VarList other) {
-        VarList cur1 = this;
-        VarList cur2 = other;
+    public static VarList union(final VarList first,
+                                final VarList second) {
+        VarList cur1 = second;
+        VarList cur2 = first;
 
-        while (!cur2.isNil()) {
+        while (null != cur2) {
             cur1 = new VarList(cur2.name, cur2.value, cur1);
             cur2 = cur2.rest;
         }
@@ -95,7 +84,7 @@ public class VarList {
         sb.append("VarList(");
         boolean first = true;
         VarList cur = this;
-        while (!cur.isNil()) {
+        while (null != cur) {
             if (first) {
                 first = false;
             } else {

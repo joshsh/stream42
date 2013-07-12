@@ -15,11 +15,9 @@ import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailException;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -208,15 +206,17 @@ public class QueryEngine {
 
     private void flushIntermediateResults() {
         for (PartialSolution q : intermediateResultBuffer) {
-            for (TriplePattern tp : q.getGraphPattern()) {
-                indexTriplePattern(tp, q);
+            LList<TriplePattern> cur = q.getGraphPattern();
+            while (!cur.isNil()) {
+                indexTriplePattern(cur.getValue(), q);
+                cur = cur.getRest();
             }
         }
         intermediateResultBuffer.clear();
     }
 
     private VarList toVarList(final Statement s) {
-        VarList l = VarList.NIL;
+        VarList l = null;
 
         l = new VarList(null, s.getObject(), l);
         l = new VarList(null, s.getPredicate(), l);
@@ -225,7 +225,7 @@ public class QueryEngine {
     }
 
     private VarList toVarList(TriplePattern p) {
-        VarList l = VarList.NIL;
+        VarList l = null;
         l = new VarList(p.getObject().getName(), p.getObject().getValue(), l);
         l = new VarList(p.getPredicate().getName(), p.getPredicate().getValue(), l);
         l = new VarList(p.getSubject().getName(), p.getSubject().getValue(), l);
@@ -265,26 +265,30 @@ public class QueryEngine {
                              final TriplePattern satisfiedPattern,
                              final VarList newBindings) {
         //System.out.println("triple pattern satisfied: " + satisfiedPattern + " with bindings " + newBindings);
-        if (1 == ps.getGraphPattern().size()) {
+        // TODO: optimize this length = 1 check
+        if (1 == ps.getGraphPattern().length()) {
             //System.out.println("producing solution: " + newBindings);
-            produceSolution(ps, ps.getBindings().prepend(newBindings));
+            produceSolution(ps, VarList.union(newBindings, ps.getBindings()));
         } else {
             //System.out.println("creating new query");
-            Set<TriplePattern> nextPatterns = new HashSet<TriplePattern>();
+            LList<TriplePattern> nextPatterns = LList.NIL;
 
-            VarList nextBindings = ps.getBindings().prepend(newBindings);
+            VarList nextBindings = VarList.union(newBindings, ps.getBindings());
 
-            for (TriplePattern t : ps.getGraphPattern()) {
+            LList<TriplePattern> cur = ps.getGraphPattern();
+            while (!cur.isNil()) {
+                TriplePattern t = cur.getValue();
                 // Note: comparison with == is appropriate here thanks to deduplication of triple patterns
                 if (t != satisfiedPattern) {
                     TriplePattern p = replace(t, newBindings);
 
                     if (null == p) {
-                        nextPatterns.add(t);
+                        nextPatterns = nextPatterns.push(t);
                     } else {
-                        nextPatterns.add(deduplicator.deduplicate(p));
+                        nextPatterns = nextPatterns.push(deduplicator.deduplicate(p));
                     }
                 }
+                cur = cur.getRest();
             }
 
             addIntermediateResult(
@@ -297,7 +301,7 @@ public class QueryEngine {
                                  final VarList nextBindings) {
         MapBindingSet b = new MapBindingSet();
         VarList cur = nextBindings;
-        while (!cur.isNil()) {
+        while (null != cur) {
             if (r.getSubscription().getQuery().getBindingNames().contains(cur.getName())) {
                 //System.out.println("\t:" + cur);
                 String n = r.getSubscription().getQuery().getExtendedBindingNames().get(cur.getName());

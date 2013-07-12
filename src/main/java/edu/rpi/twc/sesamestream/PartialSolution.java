@@ -1,8 +1,5 @@
 package edu.rpi.twc.sesamestream;
 
-import java.util.Collection;
-import java.util.Set;
-
 /**
  * An intermediate result in the answering of a continuous query.
  * It contains zero or more already-completed bindings of variables to values
@@ -14,7 +11,7 @@ public class PartialSolution {
 
     private final Subscription subscription;
 
-    private final Collection<TriplePattern> graphPattern;
+    private final LList<TriplePattern> graphPattern;
 
     private final VarList bindings;
 
@@ -27,7 +24,7 @@ public class PartialSolution {
     public PartialSolution(final Subscription subscription) {
         this.subscription = subscription;
 
-        bindings = VarList.NIL;
+        bindings = null;
 
         // TODO: make this immutable, for performance sake
         graphPattern = subscription.getQuery().getGraphPattern();
@@ -41,7 +38,7 @@ public class PartialSolution {
      * @param bindings the already-completed bindings of variables to values
      */
     public PartialSolution(final Subscription subscription,
-                           final Set<TriplePattern> graphPattern,
+                           final LList<TriplePattern> graphPattern,
                            final VarList bindings) {
         this.subscription = subscription;
         this.graphPattern = graphPattern;
@@ -58,7 +55,7 @@ public class PartialSolution {
     /**
      * @return the still-to-be-matched RDF triple patterns of this partial solution
      */
-    public Collection<TriplePattern> getGraphPattern() {
+    public LList<TriplePattern> getGraphPattern() {
         return graphPattern;
     }
 
@@ -71,14 +68,16 @@ public class PartialSolution {
         sb.append("PartialSolution(").append(bindings).append(", {");
 
         boolean first = true;
-        for (TriplePattern t : graphPattern) {
+        LList<TriplePattern> cur = graphPattern;
+        while (!cur.isNil()) {
             if (first) {
                 first = false;
             } else {
                 sb.append(",");
             }
 
-            sb.append(t);
+            sb.append(cur.getValue());
+            cur = cur.getRest();
         }
 
         sb.append("})");

@@ -32,7 +32,7 @@ public class TripleIndex {
         //print();
         //new Exception().printStackTrace(System.out); System.out.flush();
 
-        if (list.isNil()) {
+        if (null == list) {
             //System.out.println("indexing nil list to " + ps);
             if (null == partialSolutions) {
                 partialSolutions = new LinkedList<PartialSolutionWrapper>();
@@ -70,12 +70,12 @@ public class TripleIndex {
     public void match(final VarList list,
                       final Statement st,
                       final SolutionBinder handler) {
-        if (list.isNil()) {
+        if (null == list) {
             //System.out.println("matching nil list for statement " + st);
             if (null != partialSolutions) {
 
                 for (PartialSolutionWrapper ps : partialSolutions) {
-                    VarList newBindings = VarList.NIL;
+                    VarList newBindings = null;
 
                     //System.out.println("\t" + ps.partialSolution);
                     TriplePattern p = ps.triplePattern;
