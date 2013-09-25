@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.openrdf.model.Namespace;
 import org.openrdf.model.Statement;
-import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.memory.MemoryStore;
@@ -60,14 +59,8 @@ public class LinkedDataTest extends QueryEngineTest {
         cache.setDataStore(store);
         queryEngine.setLinkedDataCache(cache, sail);
 
-        BindingSetHandler h = new BindingSetHandler() {
-            public void handle(BindingSet result) {
-                System.out.println("result: " + result);
-            }
-        };
-
         TupleExpr query = loadQuery("linked-data-join-1.rq");
-        queryEngine.addQuery(query, h);
+        queryEngine.addQuery(query, simpleBindingSetHandler);
         for (Statement s : loadData("example.nq")) {
             queryEngine.addStatement(s);
         }

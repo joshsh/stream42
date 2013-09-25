@@ -1,0 +1,5 @@
+SELECT * WHERE {
+  ?smaller <http://dbpedia.org/property/subdivisionName> ?bigger .
+  ?bigger <http://dbpedia.org/property/subdivisionName> ?smaller .
+  ?smaller <http://dbpedia.org/property/subdivisionName> <http://dbpedia.org/resource/United_States> .
+}

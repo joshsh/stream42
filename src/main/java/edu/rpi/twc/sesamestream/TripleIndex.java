@@ -71,7 +71,6 @@ public class TripleIndex {
         if (null == list) {
             //System.out.println("matching nil list for statement " + st);
             if (null != partialSolutions) {
-
                 LList<PartialSolutionWrapper> cur = partialSolutions;
                 while (!cur.isNil()) {
                     PartialSolutionWrapper ps = cur.getValue();

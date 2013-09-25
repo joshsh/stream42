@@ -20,11 +20,14 @@ import org.openrdf.query.parser.ParsedQuery;
 import org.openrdf.query.parser.QueryParser;
 import org.openrdf.query.parser.sparql.SPARQLParser;
 import org.openrdf.rio.RDFParser;
+import org.openrdf.rio.ntriples.NTriplesParser;
 import org.openrdf.rio.turtle.TurtleParser;
 import org.openrdf.sail.Sail;
 import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.memory.MemoryStore;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +45,12 @@ public class QueryEngineTest {
     protected Sail sail;
     protected QueryEngine queryEngine;
     protected ValueFactory vf = new ValueFactoryImpl();
+
+    protected BindingSetHandler simpleBindingSetHandler = new BindingSetHandler() {
+        public void handle(final BindingSet result) {
+            System.out.println("result: " + result);
+        }
+    };
 
     @Before
     public void setUp() throws Exception {
@@ -67,19 +76,13 @@ public class QueryEngineTest {
 
         TupleExpr q = loadQuery("simple-join-in.rq");
 
-        BindingSetHandler h = new BindingSetHandler() {
-            public void handle(BindingSet result) {
-                System.out.println("result: " + result);
-            }
-        };
-
         System.out.println("########## a");
 
         queryEngine.printIndex();
 
         System.out.println("########## s");
 
-        queryEngine.addQuery(q, h);
+        queryEngine.addQuery(q, simpleBindingSetHandler);
         queryEngine.printIndex();
 
         System.out.println("########## d");
@@ -170,6 +173,8 @@ public class QueryEngineTest {
         RDFParser p;
         if (fileName.endsWith("nq")) {
             p = new NQuadsParser();
+        } else if (fileName.endsWith("nt")) {
+            p = new NTriplesParser();
         } else if (fileName.endsWith("ttl")) {
             p = new TurtleParser();
         } else {
@@ -179,7 +184,9 @@ public class QueryEngineTest {
         StatementListBuilder c = new StatementListBuilder();
         p.setRDFHandler(c);
 
-        InputStream in = SesameStream.class.getResourceAsStream(fileName);
+        InputStream in = fileName.startsWith("/")
+                ? new FileInputStream(new File(fileName))
+                : SesameStream.class.getResourceAsStream(fileName);
         p.parse(in, BASE_URI);
         in.close();
 
