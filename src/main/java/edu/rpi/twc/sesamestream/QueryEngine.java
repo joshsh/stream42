@@ -351,7 +351,7 @@ public class QueryEngine {
 
     private void increment(final Counter counter,
                            final boolean logChange) {
-        if (SesameStream.PERFORMANCE_METRICS) {
+        if (SesameStream.getDoPerformanceMetrics()) {
             counter.increment();
             if (logChange) {
                 logHasChanged = true;
@@ -360,14 +360,14 @@ public class QueryEngine {
     }
 
     private void logHeader() {
-        if (SesameStream.PERFORMANCE_METRICS) {
+        if (SesameStream.getDoPerformanceMetrics()) {
             System.out.println("LOG\ttime1,time2,queries,statements,patterns,intermediate,solutions,indexTriplePatternOps,bindingOps,replaceOps");
         }
     }
 
     private void logEntry() {
-        if (SesameStream.PERFORMANCE_METRICS) {
-            if (!SesameStream.COMPACT_LOG_FORMAT || logHasChanged) {
+        if (SesameStream.getDoPerformanceMetrics()) {
+            if (!SesameStream.getDoUseCompactLogFormat() || logHasChanged) {
                 System.out.println("LOG\t" + timeCurrentOperationBegan
                         + "," + System.currentTimeMillis()
                         + "," + countQueries.getCount()
@@ -404,8 +404,10 @@ public class QueryEngine {
     private void handleSolution(final BindingSetHandler handler,
                                 final BindingSet solution) {
         increment(countSolutions, true);
-        System.out.println("SOLUTION\t" + System.currentTimeMillis() + "\t"
-                + QueryEngine.toString(solution));
+        if (SesameStream.getDoPerformanceMetrics()) {
+            System.out.println("SOLUTION\t" + System.currentTimeMillis() + "\t"
+                    + QueryEngine.toString(solution));
+        }
 
         handler.handle(solution);
     }

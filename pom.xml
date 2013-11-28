@@ -42,12 +42,6 @@
             <version>${sesame.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.openrdf.sesame</groupId>
-            <artifactId>sesame-sail-memory</artifactId>
-            <version>${sesame.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>net.fortytwo</groupId>
             <artifactId>linked-data-sail</artifactId>
             <version>${ripple.version}</version>
@@ -61,11 +55,16 @@
             <groupId>org.openrdf.sesame</groupId>
             <artifactId>sesame-rio-ntriples</artifactId>
             <version>${sesame.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.openrdf.sesame</groupId>
             <artifactId>sesame-rio-turtle</artifactId>
+            <version>${sesame.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-sail-memory</artifactId>
             <version>${sesame.version}</version>
             <scope>test</scope>
         </dependency>

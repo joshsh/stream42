@@ -19,7 +19,7 @@ public class VarList {
         this.value = value;
         this.rest = rest;
 
-        if (SesameStream.DEBUG) {
+        if (SesameStream.getDoDebug()) {
             checkForDuplicateName(name);
         }
     }
