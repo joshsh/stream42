@@ -1,8 +1,10 @@
 package edu.rpi.twc.sesamestream;
 
 /**
-* @author Joshua Shinavier (http://fortytwo.net)
-*/
+ * An object which associates a SPARQL query with a handler for the query's results
+ *
+ * @author Joshua Shinavier (http://fortytwo.net)
+ */
 public class Subscription {
     private final Query query;
     private final BindingSetHandler handler;

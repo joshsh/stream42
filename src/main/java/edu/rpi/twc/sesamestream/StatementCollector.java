@@ -1,20 +1,24 @@
-package edu.rpi.twc.sesamestream.util;
+package edu.rpi.twc.sesamestream;
 
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Collection;
 
 /**
-* @author Joshua Shinavier (http://fortytwo.net)
-*/
-public class StatementListBuilder implements RDFHandler {
-    private List<Statement> list;
+ * An <code>RDFHandler</code> which adds handled <code>Statement</code>s to a designated <code>Collection</code>
+ *
+ * @author Joshua Shinavier (http://fortytwo.net)
+ */
+class StatementCollector implements RDFHandler {
+    private Collection<Statement> coll;
+
+    public StatementCollector(final Collection<Statement> coll) {
+        this.coll = coll;
+    }
 
     public void startRDF() throws RDFHandlerException {
-        list = new LinkedList<Statement>();
     }
 
     public void endRDF() throws RDFHandlerException {
@@ -24,13 +28,9 @@ public class StatementListBuilder implements RDFHandler {
     }
 
     public void handleStatement(Statement s) throws RDFHandlerException {
-        list.add(s);
+        coll.add(s);
     }
 
     public void handleComment(String s) throws RDFHandlerException {
-    }
-
-    public List<Statement> getStatements() {
-        return list;
     }
 }

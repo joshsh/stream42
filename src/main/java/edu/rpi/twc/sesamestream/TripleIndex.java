@@ -10,6 +10,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * A recursive data structure which associates {@link TriplePattern}s with SPARQL {@link PartialSolution}s and computes
+ * new solutions in response to incoming RDF statements.
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class TripleIndex {
@@ -23,21 +26,34 @@ public class TripleIndex {
     // child index matching any value
     private TripleIndex wildcardIndex;
 
+    /**
+     * Recursively associates a triple pattern with a partial solution such as a query
+     * @param p the triple pattern against which incoming statements will logically be matched
+     * @param tuple the remaining portion of the triple pattern to be indexed at this level
+     * @param ps the partial solution to store.
+     *           When incoming statements match against the triple pattern, this partial solution will be retrieved.
+     */
     public void index(final TriplePattern p,
-                      final VarList list,
+                      final VarList tuple,
                       final PartialSolution ps) {
         //System.out.println("indexing:\n\t" + list + "\n\t" + ps);
         //print();
         //new Exception().printStackTrace(System.out); System.out.flush();
 
-        if (null == list) {
+        // done recursing; add the partial solution at this level
+        if (null == tuple) {
             //System.out.println("indexing nil list to " + ps);
             if (null == partialSolutions) {
                 partialSolutions = LList.NIL;
             }
+
             partialSolutions = partialSolutions.push(new PartialSolutionWrapper(p, ps));
-        } else {
-            Value v = list.getValue();
+        }
+
+        // continue recursing, "left" or "right" depending on whether the first value in the tuple
+        // is a value or a wildcard
+        else {
+            Value v = tuple.getValue();
 
             if (null == v) {
                 //System.out.println("indexing null from list " + list + " to " + ps);
@@ -45,7 +61,7 @@ public class TripleIndex {
                     wildcardIndex = new TripleIndex();
                 }
 
-                wildcardIndex.index(p, list.getRest(), ps);
+                wildcardIndex.index(p, tuple.getRest(), ps);
             } else {
                 //System.out.println("indexing value " + v + " from list " + list + " to " + ps);
 
@@ -60,15 +76,23 @@ public class TripleIndex {
                     valueIndices.put(v, n);
                 }
 
-                n.index(p, list.getRest(), ps);
+                n.index(p, tuple.getRest(), ps);
             }
         }
     }
 
-    public void match(final VarList list,
+    /**
+     * Recursively matches a tuple pattern (at the top level, an RDF statement) against all indexed patterns,
+     * handling matching partial solutions.
+     * @param tuple the remaining portion of the statement to be matched
+     * @param st the original statement
+     * @param binder a handler for matching partial solutions
+     */
+    public void match(final VarList tuple,
                       final Statement st,
-                      final SolutionBinder handler) {
-        if (null == list) {
+                      final SolutionBinder binder) {
+        // done recursing; all partial solutions at this level are matches
+        if (null == tuple) {
             //System.out.println("matching nil list for statement " + st);
             if (null != partialSolutions) {
                 LList<PartialSolutionWrapper> cur = partialSolutions;
@@ -77,46 +101,55 @@ public class TripleIndex {
                     VarList newBindings = null;
 
                     //System.out.println("\t" + ps.partialSolution);
-                    TriplePattern p = ps.triplePattern;
+                    TriplePattern matched = ps.triplePattern;
                     //System.out.println("\t\t" + p);
-                    if (!p.getSubject().hasValue()) {
+                    if (!matched.getSubject().hasValue()) {
                         //System.out.println("\t\t\tsubject");
-                        newBindings = new VarList(p.getSubject().getName(), st.getSubject(), newBindings);
+                        newBindings = new VarList(matched.getSubject().getName(), st.getSubject(), newBindings);
                     }
 
-                    if (!p.getPredicate().hasValue()) {
+                    if (!matched.getPredicate().hasValue()) {
                         //System.out.println("\t\t\tpredicate");
-                        newBindings = new VarList(p.getPredicate().getName(), st.getPredicate(), newBindings);
+                        newBindings = new VarList(matched.getPredicate().getName(), st.getPredicate(), newBindings);
                     }
 
-                    if (!p.getObject().hasValue()) {
+                    if (!matched.getObject().hasValue()) {
                         //System.out.println("\t\t\tobject");
-                        newBindings = new VarList(p.getObject().getName(), st.getObject(), newBindings);
+                        newBindings = new VarList(matched.getObject().getName(), st.getObject(), newBindings);
                     }
 
-                    handler.bind(ps.partialSolution, p, newBindings);
+                    binder.bind(ps.partialSolution, matched, newBindings);
                     cur = cur.getRest();
                 }
             }
-        } else {
+        }
+
+        // keep recursing, "left" and "right"
+        else {
             //System.out.println("matching non-nil list " + list + " for statement: " + st);
             if (null != valueIndices) {
-                //System.out.println("we have bound variable indices");
-                TripleIndex child = valueIndices.get(list.getValue());
+                //System.out.println("we have value indices");
+                TripleIndex child = valueIndices.get(tuple.getValue());
 
                 if (null != child) {
                     //System.out.println("child found");
-                    child.match(list.getRest(), st, handler);
+                    child.match(tuple.getRest(), st, binder);
                 }
             }
 
             if (null != wildcardIndex) {
-                //System.out.println("we have unbound variable indices");
-                wildcardIndex.match(list.getRest(), st, handler);
+                //System.out.println("we have a wildcard index");
+                wildcardIndex.match(tuple.getRest(), st, binder);
             }
         }
     }
 
+    /**
+     * Visits all partial solutions in the database.
+     * Useful for inspecting the contents of the database at any given time, e.g. by counting or printing.
+     * @param v a visitor for partial solutions
+     * @return whether all solutions were visited (<code>Visitor</code>s may choose to abort the traversal)
+     */
     public boolean visitPartialSolutions(final Visitor<PartialSolution> v) {
         if (null != partialSolutions) {
             LList<PartialSolutionWrapper> cur = partialSolutions;
@@ -145,6 +178,9 @@ public class TripleIndex {
         return true;
     }
 
+    /**
+     * Prints a plain text representation of this index to standard output
+     */
     public void print() {
         printInternal("");
     }

@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream.sim;
+package edu.rpi.twc.sesamestream;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -7,9 +7,12 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 /**
+ * Placeholder for a {@link edu.rpi.twc.sesamestream.QueryEngine} proxy, to be used for time complexity analysis
+ * as opposed to computation of query results
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class QueryEngineSim {
+class QueryEngineSim {
     private final PriorityQueue<PartialSolutionSim> deletionQueue;
 
     private final Map<TriplePatternSim, List<PartialSolutionSim>> index;

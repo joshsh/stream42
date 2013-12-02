@@ -1,6 +1,8 @@
 package edu.rpi.twc.sesamestream;
 
 /**
+ * A collection of global flags which influence SesameStream's behavior
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SesameStream {

@@ -1,6 +1,8 @@
 package edu.rpi.twc.sesamestream;
 
 /**
+ * A generic visitor for objects in a collection.  Each object is to be visited once.
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public interface Visitor<T> {

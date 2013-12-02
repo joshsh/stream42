@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * SesameStream's internal representation of a SPARQL query
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class Query {
@@ -50,6 +52,10 @@ public class Query {
 
     public LList<TriplePattern> getGraphPattern() {
         return graphPattern;
+    }
+
+    public Set<String> getBindingNames() {
+        return bindingNames;
     }
 
     public Map<String, String> getExtendedBindingNames() {
@@ -118,7 +124,7 @@ public class Query {
     private List<QueryModelNode> visit(final QueryModelNode node) {
         //System.out.println("### visit");
         List<QueryModelNode> visited = new LinkedList<QueryModelNode>();
-        SimpleVisitor v = new SimpleVisitor(visited);
+        SimpleQueryModelVisitor v = new SimpleQueryModelVisitor(visited);
 
         try {
             node.visit(v);
@@ -136,7 +142,7 @@ public class Query {
     private List<QueryModelNode> visitChildren(final QueryModelNode node) {
         //System.out.println("### visitChildren");
         List<QueryModelNode> visited = new LinkedList<QueryModelNode>();
-        SimpleVisitor v = new SimpleVisitor(visited);
+        SimpleQueryModelVisitor v = new SimpleQueryModelVisitor(visited);
 
         try {
             node.visitChildren(v);
@@ -151,10 +157,10 @@ public class Query {
         return visited;
     }
 
-    public Set<String> getBindingNames() {
-        return bindingNames;
-    }
-
+    /**
+     * An exception thrown when a valid SPARQL query is incompatible with SesameStream.
+     * Only a subset of the SPARQL standard is supported.
+     */
     public static class IncompatibleQueryException extends Exception {
         public IncompatibleQueryException() {
             super();

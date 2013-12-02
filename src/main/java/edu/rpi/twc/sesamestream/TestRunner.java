@@ -1,7 +1,5 @@
 package edu.rpi.twc.sesamestream;
 
-import edu.rpi.twc.sesamestream.util.ErrorTolerantValueFactory;
-import edu.rpi.twc.sesamestream.util.QueryEngineAdder;
 import info.aduna.io.IOUtil;
 import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.query.BindingSet;
@@ -25,6 +23,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
+ * A command-line utility for executing continuous query (*.rq) files against RDF data (*.nt) files in the N-Triples format
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class TestRunner {

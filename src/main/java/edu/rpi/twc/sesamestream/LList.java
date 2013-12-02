@@ -7,7 +7,7 @@ import java.util.Collection;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class LList<T> {
+class LList<T> {
     public static LList NIL = new LList();
 
     private final T value;

@@ -2,8 +2,9 @@ package edu.rpi.twc.sesamestream;
 
 /**
  * An intermediate result in the answering of a continuous query.
- * It contains zero or more already-completed bindings of variables to values
- * as well as a basic graph pattern (BGP) of one or more still-to-be-matched triple patterns.
+ * It contains a {@link Subscription}, zero or more already-completed bindings of variables to values,
+ * and a basic graph pattern (BGP) of one or more still-to-be-matched triple patterns.
+ * Logically, a SesameStream query engine's index is a set of <code>PartialSolution</code>s.
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
@@ -59,10 +60,14 @@ public class PartialSolution {
         return graphPattern;
     }
 
+    /**
+     * @return the subscription to which any complete solutions to this <code>PartialSolution</code> will be delivered
+     */
     public Subscription getSubscription() {
         return subscription;
     }
 
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("PartialSolution(").append(bindings).append(", {");

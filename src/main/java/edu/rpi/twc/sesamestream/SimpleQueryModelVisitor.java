@@ -83,10 +83,10 @@ import java.util.List;
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class SimpleVisitor implements QueryModelVisitor {
+class SimpleQueryModelVisitor implements QueryModelVisitor {
     private final List<QueryModelNode> visited;
 
-    public SimpleVisitor(List<QueryModelNode> visited) {
+    public SimpleQueryModelVisitor(List<QueryModelNode> visited) {
         this.visited = visited;
     }
 

@@ -21,19 +21,24 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
+ * A SesameStream continuous SPARQL query engine.
+ * The engine receives SPARQL queries in advance of the data they query against, and answers them in a forward-chaining fashion.
+ * Optionally (depending on {@link edu.rpi.twc.sesamestream.SesameStream} settings), performance data is generated in the process.
+ * <p/>
+ * <p/>
+ * Current assumptions:
+ * 1) only simple, conjunctive SELECT queries, without filters, unions, optionals, etc.
+ * 2) no GRAPH constraints
+ * 3) no duplicate queries
+ * 4) no duplicate statements
+ * 5) no duplicate triple patterns in a query
+ * 6) single query at a time
+ * 7) no combo of queries and statements such that multiple triple patterns match the same statement
+ * 8 queries are only added, never removed
+ * 9) statements are only added, never removed
+ * 10) a statement will never match more than one triple pattern, per query, at a time
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
- *         <p/>
- *         Current assumptions:
- *         1) only simple, conjunctive SELECT queries (no filters, etc.)
- *         2) no named graphs
- *         3) no duplicate queries
- *         4) no duplicate statements
- *         5) no duplicate triple patterns in a query
- *         6) single query at a time
- *         7) no combo of queries and statements such that multiple triple patterns match the same statement
- *         8 queries are only added, never removed
- *         9) statements are only added, never removed
- *         10) a statement will never match more than one triple pattern, per query, at a time
  */
 public class QueryEngine {
     private static final Logger LOGGER = Logger.getLogger(QueryEngine.class.getName());
@@ -41,7 +46,7 @@ public class QueryEngine {
     //private final Map<TriplePattern, Collection<PartialSolution>> oldIndex;
     private final TripleIndex index;
 
-    private final List<PartialSolution> intermediateResultBuffer = new LinkedList<PartialSolution>();
+    private final List<PartialSolution> intermediateSolutionBuffer = new LinkedList<PartialSolution>();
 
     // A buffer for statements added as the result of adding other statements (e.g. in response to Linked Data fetches)
     // This avoids concurrent modification exceptions.
@@ -56,11 +61,11 @@ public class QueryEngine {
 
     private final SolutionBinder binder = new SolutionBinder() {
         public void bind(final PartialSolution ps,
-                         final TriplePattern p,
-                         final VarList l) {
+                         final TriplePattern matched,
+                         final VarList newBindings) {
             increment(countBindingOps, false);
 
-            bindSolution(ps, p, l);
+            bindSolution(ps, matched, newBindings);
         }
     };
 
@@ -72,12 +77,15 @@ public class QueryEngine {
             countQueries = new Counter(),
             countTriplePatterns = new Counter(),
             countStatements = new Counter(),
-            countIntermediateResults = new Counter(),
+            countPartialSolutions = new Counter(),
             countSolutions = new Counter(),
-            countIndexTriplePatternOps = new Counter(),
+            countIndexOps = new Counter(),
             countBindingOps = new Counter(),
             countReplaceOps = new Counter();
 
+    /**
+     * Creates a new query engine with an empty index
+     */
     public QueryEngine() {
         index = new TripleIndex();
         //oldIndex = new HashMap<TriplePattern, Collection<PartialSolution>>();
@@ -86,6 +94,17 @@ public class QueryEngine {
         clear();
     }
 
+    /**
+     * Adds a Linked Data fetching and caching layer to this query engine.
+     * Once added, the Linked Data cache will listen for new triple patterns indexed by this query engine,
+     * and issue corresponding HTTP requests for additional information about URIs in those patterns.
+     * Any RDF statements from retrieved documents are passed into the query engine, where they may contribute
+     * to query results and/or partial solutions, and may trigger further HTTP requests.
+     *
+     * @param cache a collection of caching metadata about Linked Data already retrieved
+     * @param sail the RDF component of the caching metadata
+     * @throws SailException if a cache-level query exception occurs
+     */
     public void setLinkedDataCache(final LinkedDataCache cache,
                                    final Sail sail) throws SailException {
         this.linkedDataCache = cache;
@@ -93,16 +112,18 @@ public class QueryEngine {
         this.linkedDataCacheConnection = sail.getConnection();
     }
 
-    public void visitPartialSolutions(final Visitor<PartialSolution> v) {
-        index.visitPartialSolutions(v);
-    }
-
-    public void printIndex() {
-        index.print();
+    /**
+     * Gets the index, or in-memory database, of this query engine
+     * @return the index, or in-memory database, of this query engine.
+     *         It should not be necessary to interact with the index directly, but it is possible to inspect the index via
+     *         print and visit methods.
+     */
+    public TripleIndex getIndex() {
+        return index;
     }
 
     /**
-     * Removes all queries, statements, and intermediate results.
+     * Removes all triple patterns with associated partial solutions, queries, and subscriptions
      */
     public void clear() {
         // TODO: index.clear()
@@ -112,9 +133,9 @@ public class QueryEngine {
         countQueries.reset();
         countTriplePatterns.reset();
         countStatements.reset();
-        countIntermediateResults.reset();
+        countPartialSolutions.reset();
         countSolutions.reset();
-        countIndexTriplePatternOps.reset();
+        countIndexOps.reset();
         countBindingOps.reset();
         countReplaceOps.reset();
 
@@ -142,8 +163,8 @@ public class QueryEngine {
         Subscription s = new Subscription(q, h);
 
         PartialSolution query = new PartialSolution(s);
-        addIntermediateResult(query);
-        flushIntermediateResults();
+        addPartialSolution(query);
+        flushPartialSolutions();
 
         logEntry();
 
@@ -154,8 +175,8 @@ public class QueryEngine {
      * Adds a new statement to this query engine.
      * Depending on the queries registered with this engine,
      * the statement will either be discarded as irrelevant to the queries,
-     * trigger the creation of intermediate query results which are stored in anticipation of further statements,
-     * or trigger the production final query results
+     * trigger the creation of partial solutions which are stored in anticipation of further statements,
+     * or trigger the production query results
      *
      * @param s the statement to add
      */
@@ -173,7 +194,7 @@ public class QueryEngine {
 
             index.match(toVarList(s), s, binder);
 
-            flushIntermediateResults();
+            flushPartialSolutions();
 
             logEntry();
 
@@ -195,22 +216,22 @@ public class QueryEngine {
         }
     }
 
-    private void addIntermediateResult(final PartialSolution ps) {
-        increment(countIntermediateResults, true);
+    private void addPartialSolution(final PartialSolution ps) {
+        increment(countPartialSolutions, true);
         //System.out.println("intermediate result:\t" + q);
 
-        intermediateResultBuffer.add(ps);
+        intermediateSolutionBuffer.add(ps);
     }
 
-    private void flushIntermediateResults() {
-        for (PartialSolution q : intermediateResultBuffer) {
+    private void flushPartialSolutions() {
+        for (PartialSolution q : intermediateSolutionBuffer) {
             LList<TriplePattern> cur = q.getGraphPattern();
             while (!cur.isNil()) {
                 indexTriplePattern(cur.getValue(), q);
                 cur = cur.getRest();
             }
         }
-        intermediateResultBuffer.clear();
+        intermediateSolutionBuffer.clear();
     }
 
     private VarList toVarList(final Statement s) {
@@ -232,7 +253,7 @@ public class QueryEngine {
 
     private void indexTriplePattern(final TriplePattern p,
                                     final PartialSolution q) {
-        increment(countIndexTriplePatternOps, false);
+        increment(countIndexOps, false);
 
         VarList l = toVarList(p);
         index.index(p, l, q);
@@ -259,16 +280,24 @@ public class QueryEngine {
         }
     }
 
-    public void bindSolution(final PartialSolution ps,
-                             final TriplePattern satisfiedPattern,
-                             final VarList newBindings) {
+    private void bindSolution(final PartialSolution ps,
+                              final TriplePattern matched,
+                              final VarList newBindings) {
         //System.out.println("triple pattern satisfied: " + satisfiedPattern + " with bindings " + newBindings);
+
+        // if a partial solution has only one triple pattern, and an incoming statement has just matched against it,
+        // then a query solution has just been found
         // TODO: optimize this length = 1 check
         if (1 == ps.getGraphPattern().length()) {
             //System.out.println("producing solution: " + newBindings);
             produceSolution(ps, VarList.union(newBindings, ps.getBindings()));
-        } else {
-            //System.out.println("creating new query");
+        }
+
+        // if there is more than one triple pattern in the partial solution, then the remaining patterns still
+        // need to be matched by other statements before we have a complete solution.  Create and index a new partial
+        // solution which adds the new bindings and subtracts the already-matched triple pattern.
+        else {
+            //System.out.println("creating new partial solution");
             LList<TriplePattern> nextPatterns = LList.NIL;
 
             VarList nextBindings = VarList.union(newBindings, ps.getBindings());
@@ -276,8 +305,8 @@ public class QueryEngine {
             LList<TriplePattern> cur = ps.getGraphPattern();
             while (!cur.isNil()) {
                 TriplePattern t = cur.getValue();
-                // Note: comparison with == is appropriate here thanks to deduplication of triple patterns
-                if (t != satisfiedPattern) {
+                // Note: comparison with != is appropriate here thanks to de-duplication of triple patterns
+                if (t != matched) {
                     TriplePattern p = replace(t, newBindings);
 
                     if (null == p) {
@@ -289,7 +318,7 @@ public class QueryEngine {
                 cur = cur.getRest();
             }
 
-            addIntermediateResult(
+            addPartialSolution(
                     new PartialSolution(ps.getSubscription(), nextPatterns, nextBindings));
         }
     }
@@ -361,7 +390,7 @@ public class QueryEngine {
 
     private void logHeader() {
         if (SesameStream.getDoPerformanceMetrics()) {
-            System.out.println("LOG\ttime1,time2,queries,statements,patterns,intermediate,solutions,indexTriplePatternOps,bindingOps,replaceOps");
+            System.out.println("LOG\ttime1,time2,queries,statements,patterns,partial,solutions,indexOps,bindingOps,replaceOps");
         }
     }
 
@@ -373,9 +402,9 @@ public class QueryEngine {
                         + "," + countQueries.getCount()
                         + "," + countStatements.getCount()
                         + "," + countTriplePatterns.getCount()
-                        + "," + countIntermediateResults.getCount()
+                        + "," + countPartialSolutions.getCount()
                         + "," + countSolutions.getCount()
-                        + "," + countIndexTriplePatternOps.getCount()
+                        + "," + countIndexOps.getCount()
                         + "," + countBindingOps.getCount()
                         + "," + countReplaceOps.getCount());
 
@@ -384,7 +413,6 @@ public class QueryEngine {
         }
     }
 
-    //*
     private static String toString(final BindingSet b) {
         StringBuilder sb = new StringBuilder();
         boolean first = true;
@@ -399,7 +427,7 @@ public class QueryEngine {
         }
 
         return sb.toString();
-    }//*/
+    }
 
     private void handleSolution(final BindingSetHandler handler,
                                 final BindingSet solution) {
@@ -412,7 +440,9 @@ public class QueryEngine {
         handler.handle(solution);
     }
 
-    // Ensures that triple patterns created by replacement are not duplicate objects
+    /**
+     * An object to ensure that triple patterns created by replacement are not duplicates
+     */
     public class TriplePatternDeduplicator {
         public TriplePattern deduplicate(final TriplePattern t) {
             TriplePattern t2 = uniquePatterns.get(t);

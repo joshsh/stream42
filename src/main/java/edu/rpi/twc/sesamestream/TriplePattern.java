@@ -4,6 +4,8 @@ import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.Var;
 
 /**
+ * A subject-predicate-object pattern in which each part of speech may be either a term (URI, literal, or blank node) or a named variable
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class TriplePattern {

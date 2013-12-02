@@ -1,6 +1,5 @@
 package edu.rpi.twc.sesamestream;
 
-import edu.rpi.twc.sesamestream.util.StatementListBuilder;
 import info.aduna.io.IOUtil;
 import info.aduna.iteration.CloseableIteration;
 import net.fortytwo.sesametools.nquads.NQuadsParser;
@@ -11,6 +10,7 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.algebra.TupleExpr;
@@ -30,9 +30,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -45,6 +47,13 @@ public class QueryEngineTest {
     protected Sail sail;
     protected QueryEngine queryEngine;
     protected ValueFactory vf = new ValueFactoryImpl();
+
+    protected String ex = "http://example.org/";
+    protected String foaf = "http://xmlns.com/foaf/0.1/";
+    protected URI arthur = vf.createURI(ex + "arthur");
+    protected URI zaphod = vf.createURI(ex + "zaphod");
+    protected URI ford = vf.createURI(ex + "ford");
+    protected URI knows = vf.createURI(foaf + "knows");
 
     protected BindingSetHandler simpleBindingSetHandler = new BindingSetHandler() {
         public void handle(final BindingSet result) {
@@ -65,15 +74,9 @@ public class QueryEngineTest {
         sail.shutDown();
     }
 
+    /*
     @Test
     public void testManually() throws Exception {
-        String ex = "http://example.org/";
-        String foaf = "http://xmlns.com/foaf/0.1/";
-        URI arthur = vf.createURI(ex + "arthur");
-        URI zaphod = vf.createURI(ex + "zaphod");
-        URI ford = vf.createURI(ex + "ford");
-        URI knows = vf.createURI(foaf + "knows");
-
         TupleExpr q = loadQuery("simple-join-in.rq");
 
         System.out.println("########## a");
@@ -97,6 +100,7 @@ public class QueryEngineTest {
 
         System.out.println("########## g");
     }
+    */
 
     @Test
     public void testSimple() throws Exception {
@@ -159,6 +163,37 @@ public class QueryEngineTest {
                 loadQuery("circle-join.rq"));
     }
 
+    @Test
+    public void testIrrelevantStatementsAreNotIndexed() throws Exception {
+
+        queryEngine.addQuery(loadQuery("simple-join-in.rq"), new NullBindingSetHandler());
+        assertEquals(2, countPartialSolutions());
+
+        queryEngine.addStatement(vf.createStatement(arthur, knows, zaphod));
+        assertEquals(3, countPartialSolutions());
+
+        // irrelevant statement; no change
+        queryEngine.addStatement(vf.createStatement(arthur, RDF.TYPE, arthur));
+        assertEquals(3, countPartialSolutions());
+
+        // irrelevant statement; no change
+        queryEngine.addStatement(vf.createStatement(arthur, RDF.TYPE, ford));
+        assertEquals(3, countPartialSolutions());
+
+        // irrelevant statement; no change
+        queryEngine.addStatement(vf.createStatement(ford, knows, arthur));
+        assertEquals(3, countPartialSolutions());
+    }
+
+    /*
+    @Test
+    public void testExtendoQueries() throws Exception {
+        compareAnswers(
+                loadData("extendo-gestures.nt"),
+                loadQuery("extendo-gestures.rq"));
+    }
+    */
+
     protected TupleExpr loadQuery(final String fileName) throws Exception {
         InputStream in = SesameStream.class.getResourceAsStream(fileName);
         String query = IOUtil.readString(in);
@@ -181,8 +216,10 @@ public class QueryEngineTest {
             throw new IllegalStateException("unsupported file extension");
         }
 
-        StatementListBuilder c = new StatementListBuilder();
-        p.setRDFHandler(c);
+        p.setDatatypeHandling(RDFParser.DatatypeHandling.IGNORE);
+
+        List<Statement> c = new LinkedList<Statement>();
+        p.setRDFHandler(new StatementCollector(c));
 
         InputStream in = fileName.startsWith("/")
                 ? new FileInputStream(new File(fileName))
@@ -190,7 +227,7 @@ public class QueryEngineTest {
         p.parse(in, BASE_URI);
         in.close();
 
-        return c.getStatements();
+        return c;
     }
 
     protected void compareAnswers(final List<Statement> data,
@@ -261,7 +298,8 @@ public class QueryEngineTest {
             BindingSetHandler h = new BindingSetHandler() {
                 private final Set<BindingSet> a = answers[id];
 
-                public void handle(BindingSet result) {
+                public void handle(final BindingSet result) {
+                    System.out.println("result: " + result);
                     a.add(result);
                 }
             };
@@ -278,4 +316,23 @@ public class QueryEngineTest {
         return answers;
     }
 
+    private long count;
+
+    private synchronized long countPartialSolutions() {
+        count = 0;
+
+        queryEngine.getIndex().visitPartialSolutions(new Visitor<PartialSolution>() {
+            public boolean visit(final PartialSolution ps) {
+                count++;
+                return true;
+            }
+        });
+
+        return count;
+    }
+
+    private class NullBindingSetHandler implements BindingSetHandler {
+        public void handle(final BindingSet result) {
+        }
+    }
 }

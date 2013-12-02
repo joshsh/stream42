@@ -4,6 +4,8 @@ import org.openrdf.model.Value;
 import org.openrdf.query.algebra.Var;
 
 /**
+ * A tuple of values or variables
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class VarList {
@@ -55,6 +57,13 @@ public class VarList {
         return new Var(name, value);
     }
 
+    /**
+     * Creates a new list containing the elements of two other lists.
+     * The order of elements in the original lists is not preserved.
+     * @param first a list of elements to add.  It will appear in the tail of the resulting list
+     * @param second another list of elements to add.  It will appear in the head of the resulting list, in reverse order
+     * @return the resulting list
+     */
     public static VarList union(final VarList first,
                                 final VarList second) {
         VarList cur1 = second;
@@ -68,6 +77,9 @@ public class VarList {
         return cur1;
     }
 
+    /**
+     * @return the number of elements in this list
+     */
     public int length() {
         VarList cur = this;
         int l = 0;
