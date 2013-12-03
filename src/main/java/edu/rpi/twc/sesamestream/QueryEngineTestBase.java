@@ -2,7 +2,6 @@ package edu.rpi.twc.sesamestream;
 
 import info.aduna.io.IOUtil;
 import info.aduna.iteration.CloseableIteration;
-import net.fortytwo.sesametools.nquads.NQuadsParser;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.ValueFactory;
@@ -64,16 +63,13 @@ class QueryEngineTestBase {
     }
 
     protected List<Statement> loadData(final String fileName) throws Exception {
-        RDFParser p;
-        if (fileName.endsWith("nq")) {
-            p = new NQuadsParser();
-        } else if (fileName.endsWith("nt")) {
-            p = Rio.createParser(RDFFormat.NTRIPLES);
-        } else if (fileName.endsWith("ttl")) {
-            p = Rio.createParser(RDFFormat.TURTLE);
-        } else {
+        RDFFormat format = RDFFormat.forFileName(fileName);
+
+        if (null == format) {
             throw new IllegalStateException("unsupported file extension");
         }
+
+        RDFParser p = Rio.createParser(format);
 
         p.setDatatypeHandling(RDFParser.DatatypeHandling.IGNORE);
 
@@ -100,6 +96,8 @@ class QueryEngineTestBase {
 
             SailConnection sc = sail.getConnection();
             try {
+                sc.begin();
+
                 for (Statement s : data) {
                     sc.addStatement(s.getSubject(), s.getPredicate(), s.getObject(), s.getContext());
                 }

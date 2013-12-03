@@ -14,8 +14,8 @@
     <properties>
         <junit.version>4.5</junit.version>
         <ripple.version>1.1-SNAPSHOT</ripple.version>
-        <sesame.version>2.6.9</sesame.version>
-        <sesametools.version>1.7-SNAPSHOT</sesametools.version>
+        <sesame.version>2.7.8</sesame.version>
+        <!--<sesametools.version>1.7-SNAPSHOT</sesametools.version>-->
         <!-- Note: this is overridden in the integration-test profile -->
         <srcdir>src/test/java</srcdir>
     </properties>
@@ -31,11 +31,11 @@
             <artifactId>linked-data-sail</artifactId>
             <version>${ripple.version}</version>
         </dependency>
-        <dependency>
+        <!--<dependency>
             <groupId>net.fortytwo.sesametools</groupId>
             <artifactId>nquads</artifactId>
             <version>${sesametools.version}</version>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>org.openrdf.sesame</groupId>
             <artifactId>sesame-rio-ntriples</artifactId>
@@ -43,7 +43,7 @@
         </dependency>
         <dependency>
             <groupId>org.openrdf.sesame</groupId>
-            <artifactId>sesame-rio-turtle</artifactId>
+            <artifactId>sesame-rio-nquads</artifactId>
             <version>${sesame.version}</version>
             <scope>test</scope>
         </dependency>

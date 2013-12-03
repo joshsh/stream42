@@ -30,6 +30,9 @@ for (Statement s : data) {
 }
 ```
 
+See also:
+* [SesameStream API](http://fortytwo.net/projects/sesamestream/api/latest/)
+
 Send questions or comments to:
 
 ![Josh email](http://fortytwo.net/Home_files/josh_email.jpg)

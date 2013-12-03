@@ -7,11 +7,12 @@ import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.parser.ParsedQuery;
 import org.openrdf.query.parser.QueryParser;
 import org.openrdf.query.parser.sparql.SPARQLParser;
+import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
-import org.openrdf.rio.ntriples.NTriplesParser;
+import org.openrdf.rio.Rio;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -33,10 +34,15 @@ public class TestRunner {
             printUsageAndExit();
         }
 
-        List<String> queryFiles = getLines(args[0]);
-        List<String> dataFiles = getLines(args[1]);
+        try {
+            List<String> queryFiles = getLines(args[0]);
+            List<String> dataFiles = getLines(args[1]);
 
-        doRun(queryFiles, dataFiles);
+            doRun(queryFiles, dataFiles);
+        } catch (Throwable t) {
+            t.printStackTrace(System.err);
+            System.exit(1);
+        }
     }
 
     private static void doRun(final List<String> queryFiles,
@@ -79,12 +85,19 @@ public class TestRunner {
         for (String f : dataFiles) {
             System.out.println("RUN\t" + System.currentTimeMillis() + "\tadding data file " + f);
 
+            RDFFormat format = RDFFormat.forFileName(f);
+
+            if (null == format) {
+                System.err.println("no RDF format matching file name " + f);
+                continue;
+            }
+
             //StatementListBuilder h = new StatementListBuilder();
             RDFHandler h = new QueryEngineAdder(engine);
 
             InputStream in = new FileInputStream(new File(f));
             try {
-                RDFParser p = new NTriplesParser();
+                RDFParser p = Rio.createParser(format);
                 p.setValueFactory(new ErrorTolerantValueFactory(new ValueFactoryImpl()));
                 p.setStopAtFirstError(false);
                 p.setVerifyData(false);

@@ -17,6 +17,7 @@ import org.openrdf.query.algebra.Count;
 import org.openrdf.query.algebra.Create;
 import org.openrdf.query.algebra.Datatype;
 import org.openrdf.query.algebra.DeleteData;
+import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Difference;
 import org.openrdf.query.algebra.Distinct;
 import org.openrdf.query.algebra.EmptySet;
@@ -44,6 +45,7 @@ import org.openrdf.query.algebra.Lang;
 import org.openrdf.query.algebra.LangMatches;
 import org.openrdf.query.algebra.LeftJoin;
 import org.openrdf.query.algebra.Like;
+import org.openrdf.query.algebra.ListMemberOperator;
 import org.openrdf.query.algebra.Load;
 import org.openrdf.query.algebra.LocalName;
 import org.openrdf.query.algebra.MathExpr;
@@ -140,6 +142,10 @@ class SimpleQueryModelVisitor implements QueryModelVisitor {
 
     public void meet(CompareAny compareAny) throws SimpleVisitorException {
         visited.add(compareAny);
+    }
+
+    public void meet(DescribeOperator describeOperator) throws Exception {
+        visited.add(describeOperator);
     }
 
     public void meet(Copy copy) throws SimpleVisitorException {
@@ -380,6 +386,10 @@ class SimpleQueryModelVisitor implements QueryModelVisitor {
 
     public void meet(ValueConstant valueConstant) throws SimpleVisitorException {
         visited.add(valueConstant);
+    }
+
+    public void meet(ListMemberOperator listMemberOperator) throws Exception {
+        visited.add(listMemberOperator);
     }
 
     public void meet(Var var) throws SimpleVisitorException {
