@@ -17,7 +17,7 @@ import org.openrdf.sail.memory.MemoryStore;
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class LinkedDataTest extends QueryEngineTest {
+public class LinkedDataTest extends QueryEngineTestBase {
     @Before
     public void setUp() throws Exception {
         sail = new MemoryStore();
