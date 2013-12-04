@@ -95,7 +95,6 @@ public class QueryEngine {
      */
     public QueryEngine() {
         index = new TripleIndex();
-        //oldIndex = new HashMap<TriplePattern, Collection<PartialSolution>>();
         uniquePatterns = new HashMap<TriplePattern, TriplePattern>();
         deduplicator = new TriplePatternDeduplicator();
 
@@ -138,8 +137,7 @@ public class QueryEngine {
      * Removes all triple patterns along with their associated partial solutions, queries, and subscriptions
      */
     public void clear() {
-        // TODO: index.clear()
-        //oldIndex.clear();
+        index.clear();
         uniquePatterns.clear();
 
         countQueries.reset();
@@ -365,6 +363,16 @@ public class QueryEngine {
             // after applying filters, remove non-selected variables and project
             // the final names of the selected variables
             solution = toSolutionBindings(bs, r);
+        }
+
+        // apply DISTINCT
+        Set<BindingSet> distinctSet = r.getSubscription().getQuery().getDistinctSet();
+        if (null != distinctSet) {
+            if (distinctSet.contains(solution)) {
+                return;
+            } else {
+                distinctSet.add(solution);
+            }
         }
 
         handleSolution(r.getSubscription().getHandler(), solution);

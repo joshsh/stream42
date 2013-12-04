@@ -9,6 +9,7 @@ import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.sail.memory.MemoryStore;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -116,6 +117,17 @@ public class QueryEngineTest extends QueryEngineTestBase {
     }
 
     @Test
+    public void testDistinct() throws Exception {
+        Collection<BindingSet> answers = continuousQueryAnswers(
+                loadData("example.nq"), loadQuery("exponential-join-nodistinct.rq"), false);
+        assertTrue(answers.size() > 5);
+
+        answers = continuousQueryAnswers(
+                loadData("example.nq"), loadQuery("exponential-join-distinct.rq"), false);
+        assertEquals(5, answers.size());
+    }
+
+    @Test
     public void testCircleJoin() throws Exception {
         compareAnswers(
                 loadData("example.nq"),
@@ -128,7 +140,7 @@ public class QueryEngineTest extends QueryEngineTestBase {
                 loadData("example.nq"),
                 loadQuery("regex-filter.rq"));
 
-        Set<BindingSet> answers = continuousQueryAnswers(loadData("example.nq"),
+        Set<BindingSet> answers = distinctContinuousQueryAnswers(loadData("example.nq"),
                 loadQuery("regex-filter.rq"))[0];
         assertEquals(1, answers.size());
         assertEquals("Zaphod Beeblebrox", answers.iterator().next().getValue("name").stringValue());
@@ -171,8 +183,8 @@ public class QueryEngineTest extends QueryEngineTestBase {
 
     protected void compareAnswers(final List<Statement> data,
                                   final TupleExpr... queries) throws Exception {
-        Set<BindingSet>[] staticResults = staticQueryAnswers(data, queries);
-        Set<BindingSet>[] contResults = continuousQueryAnswers(data, queries);
+        Set<BindingSet>[] staticResults = distinctStaticQueryAnswers(data, queries);
+        Set<BindingSet>[] contResults = distinctContinuousQueryAnswers(data, queries);
 
         for (int i = 0; i < queries.length; i++) {
             Set<BindingSet> staticR = staticResults[i];

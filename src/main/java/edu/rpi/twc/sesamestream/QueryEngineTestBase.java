@@ -23,6 +23,7 @@ import org.openrdf.sail.SailConnection;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -85,8 +86,8 @@ class QueryEngineTestBase {
         return c;
     }
 
-    protected Set<BindingSet>[] staticQueryAnswers(final List<Statement> data,
-                                                   final TupleExpr... queries) throws Exception {
+    protected Set<BindingSet>[] distinctStaticQueryAnswers(final List<Statement> data,
+                                                           final TupleExpr... queries) throws Exception {
         Set<BindingSet>[] answers = new Set[queries.length];
 
         int i = 0;
@@ -122,8 +123,8 @@ class QueryEngineTestBase {
         return answers;
     }
 
-    protected Set<BindingSet>[] continuousQueryAnswers(final List<Statement> data,
-                                                       final TupleExpr... queries) throws Exception {
+    protected Set<BindingSet>[] distinctContinuousQueryAnswers(final List<Statement> data,
+                                                               final TupleExpr... queries) throws Exception {
         final Set<BindingSet>[] answers = new Set[queries.length];
 
         queryEngine.clear();
@@ -149,6 +150,38 @@ class QueryEngineTestBase {
 
         for (Statement s : data) {
             queryEngine.addStatement(s);
+        }
+
+        return answers;
+    }
+
+    protected Collection<BindingSet> continuousQueryAnswers(final List<Statement> data,
+                                                            final TupleExpr query,
+                                                            final boolean debug) throws Exception {
+        final Collection<BindingSet> answers = new LinkedList<BindingSet>();
+
+        queryEngine.clear();
+
+        BindingSetHandler h = new BindingSetHandler() {
+            public void handle(final BindingSet result) {
+                if (debug) {
+                    System.out.println("result: " + result);
+                }
+                answers.add(result);
+            }
+        };
+
+        queryEngine.addQuery(query, h);
+
+        for (Statement s : data) {
+            queryEngine.addStatement(s);
+        }
+
+        Set<BindingSet> distinct = new HashSet<BindingSet>();
+        distinct.addAll(answers);
+
+        if (debug) {
+            System.out.println("" + answers.size() + " solutions (" + distinct.size() + " distinct, " + countPartialSolutions() + " partial) from " + data.size() + " statements");
         }
 
         return answers;

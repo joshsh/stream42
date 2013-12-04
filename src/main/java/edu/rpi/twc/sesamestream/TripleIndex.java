@@ -27,11 +27,23 @@ public class TripleIndex {
     private TripleIndex wildcardIndex;
 
     /**
+     * Returns this index to its original, empty state
+     */
+    public void clear() {
+        partialSolutions = null;
+        wildcardIndex = null;
+        if (null != valueIndices) {
+            valueIndices.clear();
+        }
+    }
+
+    /**
      * Recursively associates a triple pattern with a partial solution such as a query
-     * @param p the triple pattern against which incoming statements will logically be matched
+     *
+     * @param p     the triple pattern against which incoming statements will logically be matched
      * @param tuple the remaining portion of the triple pattern to be indexed at this level
-     * @param ps the partial solution to store.
-     *           When incoming statements match against the triple pattern, this partial solution will be retrieved.
+     * @param ps    the partial solution to store.
+     *              When incoming statements match against the triple pattern, this partial solution will be retrieved.
      */
     public void index(final TriplePattern p,
                       final VarList tuple,
@@ -84,8 +96,9 @@ public class TripleIndex {
     /**
      * Recursively matches a tuple pattern (at the top level, an RDF statement) against all indexed patterns,
      * handling matching partial solutions.
-     * @param tuple the remaining portion of the statement to be matched
-     * @param st the original statement
+     *
+     * @param tuple  the remaining portion of the statement to be matched
+     * @param st     the original statement
      * @param binder a handler for matching partial solutions
      */
     public void match(final VarList tuple,
@@ -147,6 +160,7 @@ public class TripleIndex {
     /**
      * Visits all partial solutions in the database.
      * Useful for inspecting the contents of the database at any given time, e.g. by counting or printing.
+     *
      * @param v a visitor for partial solutions
      * @return whether all solutions were visited (<code>Visitor</code>s may choose to abort the traversal)
      */

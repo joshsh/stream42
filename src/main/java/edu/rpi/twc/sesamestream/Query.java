@@ -1,5 +1,7 @@
 package edu.rpi.twc.sesamestream;
 
+import org.openrdf.query.BindingSet;
+import org.openrdf.query.algebra.Distinct;
 import org.openrdf.query.algebra.Extension;
 import org.openrdf.query.algebra.ExtensionElem;
 import org.openrdf.query.algebra.Filter;
@@ -36,6 +38,8 @@ public class Query {
     private LList<TriplePattern> graphPattern;
     private List<Filter> filters;
 
+    private Set<BindingSet> distinctSet;
+
     public Query(final TupleExpr expr,
                  final QueryEngine.TriplePatternDeduplicator deduplicator) throws IncompatibleQueryException {
         bindingNames = new HashSet<String>();
@@ -47,10 +51,7 @@ public class Query {
             throw new IncompatibleQueryException("multiple root nodes");
         }
         QueryModelNode root = l.iterator().next();
-        if (!(root instanceof Projection)) {
-            throw new IncompatibleQueryException("expected Projection at root node of query");
-        }
-        Projection p = (Projection) root;
+        Projection p = getRootProjection(root);
         for (ProjectionElem el : p.getProjectionElemList().getElements()) {
             addExtendedBindingName(el.getSourceName(), el.getTargetName());
         }
@@ -61,6 +62,30 @@ public class Query {
 
         for (StatementPattern pat : patterns) {
             graphPattern = graphPattern.push(deduplicator.deduplicate(new TriplePattern(pat)));
+        }
+    }
+
+    private void makeDistinct() {
+        if (null == distinctSet) {
+            distinctSet = new HashSet<BindingSet>();
+        }
+    }
+
+    private Projection getRootProjection(final QueryModelNode root) throws IncompatibleQueryException {
+        if (root instanceof Projection) {
+            return (Projection) root;
+        } else if (root instanceof Distinct) {
+            makeDistinct();
+
+            List<QueryModelNode> l = visitChildren(root);
+            if (1 != l.size()) {
+                throw new IncompatibleQueryException("exactly one node expected beneath DISTINCT");
+            }
+
+            QueryModelNode child = l.get(0);
+            return getRootProjection(child);
+        } else {
+            throw new IncompatibleQueryException("expected Projection at root node of query; found " + root);
         }
     }
 
@@ -92,6 +117,13 @@ public class Query {
 
     public List<Filter> getFilters() {
         return filters;
+    }
+
+    /**
+     * @return if this query uses DISTINCT, the set of distinct solutions already found.  Otherwise <code>null</code>
+     */
+    public Set<BindingSet> getDistinctSet() {
+        return distinctSet;
     }
 
     private void findPatterns(final StatementPattern p,
@@ -126,7 +158,7 @@ public class Query {
 
         QueryModelNode valueExpr = filterChildren.get(0);
         if (!(valueExpr instanceof ValueExpr)) {
-            throw new IncompatibleQueryException("expected value expression as first child of filter (found: " + valueExpr + ")");
+            throw new IncompatibleQueryException("expected value expression as first child of filter; found " + valueExpr);
         }
         QueryModelNode filterChild = filterChildren.get(1);
         if (filterChild instanceof Join) {
@@ -134,7 +166,7 @@ public class Query {
         } else if (filterChild instanceof StatementPattern) {
             findPatterns((StatementPattern) filterChild, patterns);
         } else {
-            throw new IncompatibleQueryException("expected join or statement pattern beneath filter (found: " + filterChild + ")");
+            throw new IncompatibleQueryException("expected join or statement pattern beneath filter; found " + filterChild);
         }
     }
 
