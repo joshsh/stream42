@@ -24,7 +24,10 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * A command-line utility for executing continuous query (*.rq) files against RDF data (*.nt) files in the N-Triples format
+ * A command-line utility for executing continuous query (*.rq) files against RDF data (*.nt) files in the N-Triples format.
+ * The main method expects two arguments: a file containing a number of queries (one file name per line)
+ * and another file containing a number of data sets (one file name per line).
+ * The queries are added first, in order, followed by the data sets.
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */

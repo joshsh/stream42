@@ -6,7 +6,11 @@ import net.fortytwo.ripple.RippleException;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
+import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.query.BindingSet;
+import org.openrdf.query.QueryEvaluationException;
+import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.impl.MapBindingSet;
@@ -18,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -59,13 +64,13 @@ public class QueryEngine {
     private LinkedDataCache linkedDataCache;
     private SailConnection linkedDataCacheConnection;
 
-    private final SolutionBinder binder = new SolutionBinder() {
-        public void bind(final PartialSolution ps,
-                         final TriplePattern matched,
-                         final VarList newBindings) {
+    private final SolutionHandler binder = new SolutionHandler() {
+        public void handle(final PartialSolution ps,
+                           final TriplePattern matched,
+                           final VarList newBindings) {
             increment(countBindingOps, false);
 
-            bindSolution(ps, matched, newBindings);
+            handleSolution(ps, matched, newBindings);
         }
     };
 
@@ -83,6 +88,8 @@ public class QueryEngine {
             countBindingOps = new Counter(),
             countReplaceOps = new Counter();
 
+    private final FilterEvaluator filterEvaluator;
+
     /**
      * Creates a new query engine with an empty index
      */
@@ -91,6 +98,10 @@ public class QueryEngine {
         //oldIndex = new HashMap<TriplePattern, Collection<PartialSolution>>();
         uniquePatterns = new HashMap<TriplePattern, TriplePattern>();
         deduplicator = new TriplePatternDeduplicator();
+
+        ValueFactory valueFactory = new ValueFactoryImpl();
+        filterEvaluator = new FilterEvaluator(valueFactory);
+
         clear();
     }
 
@@ -102,7 +113,7 @@ public class QueryEngine {
      * to query results and/or partial solutions, and may trigger further HTTP requests.
      *
      * @param cache a collection of caching metadata about Linked Data already retrieved
-     * @param sail the RDF component of the caching metadata
+     * @param sail  the RDF component of the caching metadata
      * @throws SailException if a cache-level query exception occurs
      */
     public void setLinkedDataCache(final LinkedDataCache cache,
@@ -114,6 +125,7 @@ public class QueryEngine {
 
     /**
      * Gets the index, or in-memory database, of this query engine
+     *
      * @return the index, or in-memory database, of this query engine.
      *         It should not be necessary to interact with the index directly, but it is possible to inspect the index via
      *         print and visit methods.
@@ -123,7 +135,7 @@ public class QueryEngine {
     }
 
     /**
-     * Removes all triple patterns with associated partial solutions, queries, and subscriptions
+     * Removes all triple patterns along with their associated partial solutions, queries, and subscriptions
      */
     public void clear() {
         // TODO: index.clear()
@@ -280,9 +292,9 @@ public class QueryEngine {
         }
     }
 
-    private void bindSolution(final PartialSolution ps,
-                              final TriplePattern matched,
-                              final VarList newBindings) {
+    private void handleSolution(final PartialSolution ps,
+                                final TriplePattern matched,
+                                final VarList newBindings) {
         //System.out.println("triple pattern satisfied: " + satisfiedPattern + " with bindings " + newBindings);
 
         // if a partial solution has only one triple pattern, and an incoming statement has just matched against it,
@@ -326,21 +338,114 @@ public class QueryEngine {
     // Note: this operation doesn't need to be counted; it happens exactly once for each solution (which are counted)
     private void produceSolution(final PartialSolution r,
                                  final VarList nextBindings) {
-        MapBindingSet b = new MapBindingSet();
-        VarList cur = nextBindings;
-        while (null != cur) {
-            if (r.getSubscription().getQuery().getBindingNames().contains(cur.getName())) {
-                //System.out.println("\t:" + cur);
-                String n = r.getSubscription().getQuery().getExtendedBindingNames().get(cur.getName());
-                if (null == n) {
-                    n = cur.getName();
+        List<Filter> filters = r.getSubscription().getQuery().getFilters();
+        BindingSet solution;
+
+        if (null == filters) {
+            // if there are no filters, it is more efficient not to create an intermediate BindingSet
+            solution = toSolutionBindings(nextBindings, r);
+        } else {
+            // this BindingSet may contain non-selected and pre-projected variables, suitable
+            // for filtering, but not yet a final query result
+            BindingSet bs = toFilterableBindingSet(nextBindings);
+
+            // apply all filters, discarding this BindingSet if any filter rejects it
+            for (Filter f : filters) {
+                try {
+                    if (!filterEvaluator.applyFilter(f, bs)) {
+                        return;
+                    }
+                } catch (QueryEvaluationException e) {
+                    LOGGER.severe("query evaluation error while applying filter");
+                    e.printStackTrace(System.err);
+                    return;
                 }
-                b.addBinding(n, cur.getValue());
             }
+
+            // after applying filters, remove non-selected variables and project
+            // the final names of the selected variables
+            solution = toSolutionBindings(bs, r);
+        }
+
+        handleSolution(r.getSubscription().getHandler(), solution);
+    }
+
+    private BindingSet toFilterableBindingSet(final VarList bindings) {
+
+        MapBindingSet bs = new MapBindingSet();
+        VarList cur = bindings;
+        while (null != cur) {
+            bs.addBinding(cur.getName(), cur.getValue());
+
             cur = cur.getRest();
         }
 
-        handleSolution(r.getSubscription().getHandler(), b);
+        return bs;
+    }
+
+    private BindingSet toSolutionBindings(final BindingSet bs,
+                                          final PartialSolution r) {
+        MapBindingSet newBindings = new MapBindingSet();
+
+        Set<String> names = r.getSubscription().getQuery().getBindingNames();
+        Map<String, String> extNames = r.getSubscription().getQuery().getExtendedBindingNames();
+
+        for (String name : names) {
+            Value val = bs.getValue(name);
+            if (null == val) {
+                LOGGER.warning("no value bound to variable '" + name + "' in solution");
+                continue;
+            }
+
+            String finalName;
+
+            if (null == extNames) {
+                finalName = name;
+            } else {
+                finalName = extNames.get(name);
+
+                if (null == finalName) {
+                    finalName = name;
+                }
+            }
+
+            newBindings.addBinding(finalName, val);
+        }
+
+        return newBindings;
+    }
+
+    private BindingSet toSolutionBindings(final VarList bindings,
+                                          final PartialSolution r) {
+        MapBindingSet newBindings = new MapBindingSet();
+
+        Set<String> names = r.getSubscription().getQuery().getBindingNames();
+        Map<String, String> extNames = r.getSubscription().getQuery().getExtendedBindingNames();
+
+        VarList cur = bindings;
+        while (null != cur) {
+            String name = cur.getName();
+
+            if (names.contains(name)) {
+                String finalName;
+
+                if (null == extNames) {
+                    finalName = name;
+                } else {
+                    finalName = extNames.get(name);
+
+                    if (null == finalName) {
+                        finalName = name;
+                    }
+                }
+
+                newBindings.addBinding(finalName, cur.getValue());
+            }
+
+            cur = cur.getRest();
+        }
+
+        return newBindings;
     }
 
     // TODO: currently not efficient

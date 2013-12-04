@@ -2,13 +2,16 @@ package edu.rpi.twc.sesamestream;
 
 import org.openrdf.query.algebra.Extension;
 import org.openrdf.query.algebra.ExtensionElem;
+import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.Join;
 import org.openrdf.query.algebra.Projection;
 import org.openrdf.query.algebra.ProjectionElem;
 import org.openrdf.query.algebra.ProjectionElemList;
 import org.openrdf.query.algebra.QueryModelNode;
+import org.openrdf.query.algebra.Regex;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.query.algebra.helpers.TupleExprs;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -17,6 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * SesameStream's internal representation of a SPARQL query
@@ -24,30 +28,53 @@ import java.util.Set;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class Query {
-    private final Set<String> bindingNames;
-    private final Map<String, String> extendedBindingNames;
-    private LList<TriplePattern> graphPattern;
+    private static final Logger LOGGER = Logger.getLogger(Query.class.getName());
 
-    public Query(final TupleExpr e,
+    private final Set<String> bindingNames;
+    private Map<String, String> extendedBindingNames;
+    private LList<TriplePattern> graphPattern;
+    private List<Filter> filters;
+
+    public Query(final TupleExpr expr,
                  final QueryEngine.TriplePatternDeduplicator deduplicator) throws IncompatibleQueryException {
         bindingNames = new HashSet<String>();
-        extendedBindingNames = new HashMap<String, String>();
 
         graphPattern = LList.NIL;
 
-        List<QueryModelNode> l = visit(e);
+        List<QueryModelNode> l = visit(expr);
         if (l.size() != 1) {
-            throw new IncompatibleQueryException();
+            throw new IncompatibleQueryException("multiple root nodes");
         }
-        Projection p = (Projection) l.iterator().next();
+        QueryModelNode root = l.iterator().next();
+        if (!(root instanceof Projection)) {
+            throw new IncompatibleQueryException("expected Projection at root node of query");
+        }
+        Projection p = (Projection) root;
         for (ProjectionElem el : p.getProjectionElemList().getElements()) {
-            extendedBindingNames.put(el.getSourceName(), el.getTargetName());
+            addExtendedBindingName(el.getSourceName(), el.getTargetName());
         }
 
         // TODO: eliminate redundant patterns
-        for (StatementPattern pat : findStatementPatterns(p)) {
+        Collection<StatementPattern> patterns = new LinkedList<StatementPattern>();
+        findPatterns(p, patterns);
+
+        for (StatementPattern pat : patterns) {
             graphPattern = graphPattern.push(deduplicator.deduplicate(new TriplePattern(pat)));
         }
+    }
+
+    private void addExtendedBindingName(final String from,
+                                        final String to) {
+        // projections of x onto x happen quite often; save some space
+        if (from.equals(to)) {
+            return;
+        }
+
+        if (null == extendedBindingNames) {
+            extendedBindingNames = new HashMap<String, String>();
+        }
+
+        extendedBindingNames.put(from, to);
     }
 
     public LList<TriplePattern> getGraphPattern() {
@@ -62,23 +89,56 @@ public class Query {
         return extendedBindingNames;
     }
 
-    private Collection<StatementPattern> findStatementPatterns(final Join j) throws IncompatibleQueryException {
-        Collection<StatementPattern> p = new LinkedList<StatementPattern>();
+    public List<Filter> getFilters() {
+        return filters;
+    }
 
+    private void findPatterns(final StatementPattern p,
+                              final Collection<StatementPattern> patterns) {
+        patterns.add(p);
+    }
+
+    private void findPatterns(final Join j,
+                              final Collection<StatementPattern> patterns) throws IncompatibleQueryException {
         for (QueryModelNode n : visitChildren(j)) {
             if (n instanceof StatementPattern) {
-                p.add((StatementPattern) n);
+                findPatterns((StatementPattern) n, patterns);
             } else if (n instanceof Join) {
-                p.addAll(findStatementPatterns((Join) n));
+                findPatterns((Join) n, patterns);
             } else {
                 throw new IncompatibleQueryException("unexpected node: " + n);
             }
         }
-
-        return p;
     }
 
-    private Collection<StatementPattern> findStatementPatterns(final Projection p) throws IncompatibleQueryException {
+    private void findPatterns(final Filter f,
+                              final Collection<StatementPattern> patterns) throws IncompatibleQueryException {
+        if (null == filters) {
+            filters = new LinkedList<Filter>();
+        }
+        filters.add(f);
+
+        List<QueryModelNode> filterChildren = visitChildren(f);
+        if (2 != filterChildren.size()) {
+            throw new IncompatibleQueryException("expected exactly two nodes beneath filter");
+        }
+
+        QueryModelNode regex = filterChildren.get(0);
+        if (!(regex instanceof Regex)) {
+            throw new IncompatibleQueryException("expected regex as first child of filter (found: " + regex + ")");
+        }
+        QueryModelNode filterChild = filterChildren.get(1);
+        if (filterChild instanceof Join) {
+            findPatterns((Join) filterChild, patterns);
+        } else if (filterChild instanceof StatementPattern) {
+            findPatterns((StatementPattern) filterChild, patterns);
+        } else {
+            throw new IncompatibleQueryException("expected join or statement pattern beneath filter (found: " + filterChild + ")");
+        }
+    }
+
+    private void findPatterns(final Projection p,
+                              final Collection<StatementPattern> patterns) throws IncompatibleQueryException {
         List<QueryModelNode> l = visitChildren(p);
 
         Extension ext = null;
@@ -90,35 +150,38 @@ public class Query {
                 ProjectionElemList pl = (ProjectionElemList) n;
                 for (ProjectionElem pe : pl.getElements()) {
                     bindingNames.add(pe.getSourceName());
-                    extendedBindingNames.put(pe.getSourceName(), pe.getTargetName());
+                    addExtendedBindingName(pe.getSourceName(), pe.getTargetName());
                 }
             }
         }
 
         if (null != ext) {
+            //System.out.println("visiting children");
             l = visitChildren(ext);
         }
 
         for (QueryModelNode n : l) {
             if (n instanceof Join) {
                 Join j = (Join) n;
-                if (j.hasSubSelectInRightArg()) {
-                    throw new IncompatibleQueryException();
+                if (TupleExprs.containsProjection(j)) {
+                    throw new IncompatibleQueryException("join contains projection");
                 }
 
-                return findStatementPatterns(j);
+                findPatterns(j, patterns);
             } else if (n instanceof StatementPattern) {
-                Collection<StatementPattern> c = new LinkedList<StatementPattern>();
-                c.add((StatementPattern) n);
-                return c;
+                findPatterns((StatementPattern) n, patterns);
+            } else if (n instanceof Filter) {
+                findPatterns((Filter) n, patterns);
             } else if (n instanceof ProjectionElemList) {
+                // TODO: remind self why these are ignored
+                //LOGGER.info("ignoring " + n);
             } else if (n instanceof ExtensionElem) {
+                // TODO: remind self why these are ignored
+                //LOGGER.info("ignoring " + n);
             } else {
                 throw new IncompatibleQueryException("unexpected type: " + n.getClass());
             }
         }
-
-        throw new IncompatibleQueryException();
     }
 
     private List<QueryModelNode> visit(final QueryModelNode node) {
@@ -150,9 +213,11 @@ public class Query {
             throw new IllegalStateException(e);
         }
 
-        //for (QueryModelNode n : visited) {
-        //    System.out.println("node: " + n);
-        //}
+        /*
+        for (QueryModelNode n : visited) {
+            System.out.println("node: " + n);
+        }
+        //*/
 
         return visited;
     }

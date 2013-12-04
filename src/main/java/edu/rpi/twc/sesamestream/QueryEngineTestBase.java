@@ -137,7 +137,7 @@ class QueryEngineTestBase {
                 private final Set<BindingSet> a = answers[id];
 
                 public void handle(final BindingSet result) {
-                    System.out.println("result: " + result);
+                    //System.out.println("result: " + result);
                     a.add(result);
                 }
             };

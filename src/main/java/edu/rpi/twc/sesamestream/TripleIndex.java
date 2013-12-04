@@ -90,7 +90,7 @@ public class TripleIndex {
      */
     public void match(final VarList tuple,
                       final Statement st,
-                      final SolutionBinder binder) {
+                      final SolutionHandler binder) {
         // done recursing; all partial solutions at this level are matches
         if (null == tuple) {
             //System.out.println("matching nil list for statement " + st);
@@ -118,7 +118,7 @@ public class TripleIndex {
                         newBindings = new VarList(matched.getObject().getName(), st.getObject(), newBindings);
                     }
 
-                    binder.bind(ps.partialSolution, matched, newBindings);
+                    binder.handle(ps.partialSolution, matched, newBindings);
                     cur = cur.getRest();
                 }
             }

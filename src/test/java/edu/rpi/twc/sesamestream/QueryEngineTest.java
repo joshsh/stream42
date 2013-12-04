@@ -123,6 +123,22 @@ public class QueryEngineTest extends QueryEngineTestBase {
     }
 
     @Test
+    public void testFilters() throws Exception {
+        compareAnswers(
+                loadData("example.nq"),
+                loadQuery("regex-filter.rq"));
+
+        Set<BindingSet> answers = continuousQueryAnswers(loadData("example.nq"),
+                loadQuery("regex-filter.rq"))[0];
+        assertEquals(1, answers.size());
+        assertEquals("Zaphod Beeblebrox", answers.iterator().next().getValue("name").stringValue());
+
+        compareAnswers(
+                loadData("example.nq"),
+                loadQuery("regex-filter-with-proj.rq"));
+    }
+
+    @Test
     public void testIrrelevantStatementsAreNotIndexed() throws Exception {
 
         queryEngine.addQuery(loadQuery("simple-join-in.rq"), new NullBindingSetHandler());
