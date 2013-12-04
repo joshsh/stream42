@@ -4,13 +4,14 @@ import org.openrdf.query.algebra.Extension;
 import org.openrdf.query.algebra.ExtensionElem;
 import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.Join;
+import org.openrdf.query.algebra.Order;
 import org.openrdf.query.algebra.Projection;
 import org.openrdf.query.algebra.ProjectionElem;
 import org.openrdf.query.algebra.ProjectionElemList;
 import org.openrdf.query.algebra.QueryModelNode;
-import org.openrdf.query.algebra.Regex;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.helpers.TupleExprs;
 
 import java.util.Collection;
@@ -123,9 +124,9 @@ public class Query {
             throw new IncompatibleQueryException("expected exactly two nodes beneath filter");
         }
 
-        QueryModelNode regex = filterChildren.get(0);
-        if (!(regex instanceof Regex)) {
-            throw new IncompatibleQueryException("expected regex as first child of filter (found: " + regex + ")");
+        QueryModelNode valueExpr = filterChildren.get(0);
+        if (!(valueExpr instanceof ValueExpr)) {
+            throw new IncompatibleQueryException("expected value expression as first child of filter (found: " + valueExpr + ")");
         }
         QueryModelNode filterChild = filterChildren.get(1);
         if (filterChild instanceof Join) {
@@ -178,6 +179,8 @@ public class Query {
             } else if (n instanceof ExtensionElem) {
                 // TODO: remind self why these are ignored
                 //LOGGER.info("ignoring " + n);
+            } else if (n instanceof Order) {
+                throw new IncompatibleQueryException("the ORDER BY modifier is not supported by SesameStream");
             } else {
                 throw new IncompatibleQueryException("unexpected type: " + n.getClass());
             }
