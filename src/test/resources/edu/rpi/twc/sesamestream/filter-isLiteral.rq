@@ -1,0 +1,6 @@
+PREFIX ex: <http://example.org/>
+
+SELECT ?x ?v WHERE {
+    ?x ex:hasValue ?v .
+    FILTER(isLiteral(?v))
+}

@@ -138,16 +138,55 @@ public class QueryEngineTest extends QueryEngineTestBase {
     public void testFilters() throws Exception {
         compareAnswers(
                 loadData("example.nq"),
-                loadQuery("regex-filter.rq"));
+                loadQuery("filter-regex.rq"));
 
-        Set<BindingSet> answers = distinctContinuousQueryAnswers(loadData("example.nq"),
-                loadQuery("regex-filter.rq"))[0];
+        // projection + FILTER
+        compareAnswers(
+                loadData("example.nq"),
+                loadQuery("filter-with-projection.rq"));
+
+        // SesameStream inherits its filter function implementations from Sesame,
+        // so these don't need to be exhaustively tested here.
+        // For each of the categories in the SPARQL spec, just try one or two functions.
+        // EXISTS is the only function not assumed to be supported (see dedicated test case).
+        Set<BindingSet> answers;
+
+        // try a filter with Functional Forms
+        answers = distinctContinuousQueryAnswers(loadData("example.nq"),
+                loadQuery("filter-equal.rq"))[0];
+        // 9 solutions without the filter, 6 with
+        assertEquals(6, answers.size());
+        // TODO: if/when OPTIONAL is supported, try the BOUND filter
+
+        // try an RDF term filter
+        answers = distinctContinuousQueryAnswers(loadData("example.nq"),
+                loadQuery("filter-isLiteral.rq"))[0];
+        assertEquals(10, answers.size());
+
+        // try a string filter
+        answers = distinctContinuousQueryAnswers(loadData("example.nq"),
+                loadQuery("filter-regex.rq"))[0];
         assertEquals(1, answers.size());
         assertEquals("Zaphod Beeblebrox", answers.iterator().next().getValue("name").stringValue());
 
-        compareAnswers(
-                loadData("example.nq"),
-                loadQuery("regex-filter-with-proj.rq"));
+        // try a numeric filter
+        answers = distinctContinuousQueryAnswers(loadData("example.nq"),
+                loadQuery("filter-ceil.rq"))[0];
+        assertEquals(2, answers.size());
+        assertEquals("3.1415926", answers.iterator().next().getValue("v").stringValue());
+        assertEquals("3.1415926", answers.iterator().next().getValue("v").stringValue());
+
+        // try a date/time filter
+        answers = distinctContinuousQueryAnswers(loadData("example.nq"),
+                loadQuery("filter-year.rq"))[0];
+        // there are 2 dateTime values which would match without the filter (one in 2002, and one in 2013)
+        assertEquals(1, answers.size());
+
+        // try a hash filter
+        answers = distinctContinuousQueryAnswers(loadData("example.nq"),
+                loadQuery("filter-md5.rq"))[0];
+        // there are 3 literal values with the lexical form "42", md5 hash "a1d0c6e83f027327d8461063f4ac58a6"
+        assertEquals(3, answers.size());
     }
 
     @Test
@@ -180,6 +219,11 @@ public class QueryEngineTest extends QueryEngineTestBase {
                 loadQuery("extendo-gestures.rq"));
     }
     */
+
+    @Test(expected = Query.IncompatibleQueryException.class)
+    public void testNotExistsUnsupported() throws Exception {
+        continuousQueryAnswers(loadData("example.nq"), loadQuery("not-exists.rq"), false);
+    }
 
     protected void compareAnswers(final List<Statement> data,
                                   final TupleExpr... queries) throws Exception {

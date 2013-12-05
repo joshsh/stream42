@@ -31,7 +31,8 @@
 #     :decimalValue :hasValue "+100000.00"^^xsd:decimal.
 <http://example.org/floatValue> <http://example.org/hasValue> "3.1415926"^^<http://www.w3.org/2001/XMLSchema#float> <http://example.org/graph1> .
 <http://example.org/doubleValue> <http://example.org/hasValue> "3.1415926"^^<http://www.w3.org/2001/XMLSchema#double> <http://example.org/graph1> .
-<http://example.org/dateTimeValue> <http://example.org/hasValue> "2002-10-10T12:00:00-05:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> <http://example.org/graph1> .
+<http://example.org/dateTimeValue1> <http://example.org/hasValue> "2002-10-10T12:00:00-05:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> <http://example.org/graph1> .
+<http://example.org/dateTimeValue2> <http://example.org/hasValue> "2013-12-05T14:18:22-05:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> <http://example.org/graph1> .
 <http://example.org/classA> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/01/rdf-schema#Class> <http://example.org/graph1> .
 <http://example.org/classB> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/01/rdf-schema#Class> <http://example.org/graph1> .
 <http://example.org/classB> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/classA> <http://example.org/graph1> .

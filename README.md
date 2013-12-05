@@ -44,7 +44,7 @@ SPARQL syntax currently supported by SesameStream includes:
 * [SELECT](http://www.w3.org/TR/sparql11-query/#select) queries for [basic graph patterns](http://www.w3.org/TR/sparql11-query/#BasicGraphPatterns)
 * [variable projection](http://www.w3.org/TR/sparql11-query/#modProjection)
 * all [RDF Term syntax](http://www.w3.org/TR/sparql11-query/#syntaxTerms) and [triple pattern](http://www.w3.org/TR/sparql11-query/#QSynTriples) syntax via Sesame
-* [FILTER](http://www.w3.org/TR/sparql11-query/#tests) constraints, with all SPARQL [operator function](http://www.w3.org/TR/sparql11-query/#SparqlOps) implementations inherited from Sesame
+* [FILTER](http://www.w3.org/TR/sparql11-query/#tests) constraints, with all SPARQL [operator function](http://www.w3.org/TR/sparql11-query/#SparqlOps) implementations supported via Sesame **except for** [EXISTS](http://www.w3.org/TR/sparql11-query/#func-filter-exists)
 * [DISTINCT](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier.  Use with care if the streaming data source may produce an unlimited number of solutions
 
 Syntax explicitly not supported:

@@ -2,10 +2,12 @@ package edu.rpi.twc.sesamestream;
 
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.Distinct;
+import org.openrdf.query.algebra.Exists;
 import org.openrdf.query.algebra.Extension;
 import org.openrdf.query.algebra.ExtensionElem;
 import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.Join;
+import org.openrdf.query.algebra.Not;
 import org.openrdf.query.algebra.Order;
 import org.openrdf.query.algebra.Projection;
 import org.openrdf.query.algebra.ProjectionElem;
@@ -160,6 +162,9 @@ public class Query {
         if (!(valueExpr instanceof ValueExpr)) {
             throw new IncompatibleQueryException("expected value expression as first child of filter; found " + valueExpr);
         }
+
+        checkFilterFunctionSupported((ValueExpr) valueExpr);
+
         QueryModelNode filterChild = filterChildren.get(1);
         if (filterChild instanceof Join) {
             findPatterns((Join) filterChild, patterns);
@@ -167,6 +172,27 @@ public class Query {
             findPatterns((StatementPattern) filterChild, patterns);
         } else {
             throw new IncompatibleQueryException("expected join or statement pattern beneath filter; found " + filterChild);
+        }
+    }
+
+    private void checkFilterFunctionSupported(final ValueExpr expr) throws IncompatibleQueryException {
+        if (expr instanceof Not) {
+            List<QueryModelNode> children = visitChildren(expr);
+            if (1 != children.size()) {
+                throw new IncompatibleQueryException("expected exactly one node beneath NOT");
+            }
+
+            QueryModelNode valueExpr = children.get(0);
+            if (!(valueExpr instanceof ValueExpr)) {
+                throw new IncompatibleQueryException("expected value expression as first child of NOT; found " + valueExpr);
+            }
+
+            checkFilterFunctionSupported((ValueExpr) valueExpr);
+        } else {
+            // EXISTS is specifically not (yet) supported; all other filter functions are assumed to be supported
+            if (expr instanceof Exists) {
+                throw new IncompatibleQueryException("EXISTS and NOT EXISTS are not supported");
+            }
         }
     }
 
