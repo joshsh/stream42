@@ -99,4 +99,19 @@ public class SP2BenchTest extends QueryEngineTestBase {
     }
     */
 
+    /* TODO: space complexity analysis of query #5a (and therefore query #12a)
+    @Test
+    public void testQuery12a() throws Exception {
+        Collection<BindingSet> answers = continuousQueryAnswers(data, loadQuery("sp2bench/q12a.rq"), DEBUG);
+
+        assertEquals(1, answers.size());
+    }
+    */
+
+    @Test
+    public void testQuery12c() throws Exception {
+        Collection<BindingSet> answers = continuousQueryAnswers(data, loadQuery("sp2bench/q12c.rq"), DEBUG);
+
+        assertEquals(0, answers.size());
+    }
 }

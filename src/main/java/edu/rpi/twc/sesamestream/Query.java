@@ -85,13 +85,15 @@ public class Query {
                 throw new IncompatibleQueryException("exactly one node expected beneath Slice in ASK query");
             }
 
-            QueryModelNode j = l.get(0);
-            if (j instanceof Join) {
-                findPatterns((Join) j, patterns);
-            } else if (j instanceof Filter) {
-                findPatterns((Filter) j, patterns);
+            QueryModelNode n = l.get(0);
+            if (n instanceof Join) {
+                findPatterns((Join) n, patterns);
+            } else if (n instanceof StatementPattern) {
+                findPatterns((StatementPattern) n, patterns);
+            } else if (n instanceof Filter) {
+                findPatterns((Filter) n, patterns);
             } else {
-                throw new IncompatibleQueryException("Join expected beneath Slice in ASK query; found " + j);
+                throw new IncompatibleQueryException("Join expected beneath Slice in ASK query; found " + n);
             }
         } else {
             throw new IncompatibleQueryException(queryForm.name() + " query form is currently not supported");
