@@ -40,3 +40,5 @@
 
 # link into Linked Data
 <http://example.org/arthur> <http://xmlns.com/foaf/0.1/knows> <http://fortytwo.net/foaf#josh> .
+
+<http://example.org> <http://www.w3.org/1999/02/22-rdf-syntax-ns#comment> "just another example resource" .

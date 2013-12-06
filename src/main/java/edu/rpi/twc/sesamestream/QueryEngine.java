@@ -160,8 +160,8 @@ public class QueryEngine {
      * @throws Query.IncompatibleQueryException
      *          if the syntax of the query is not supported by this engine
      */
-    public void addQuery(final TupleExpr t,
-                         final BindingSetHandler h) throws Query.IncompatibleQueryException {
+    public Subscription addQuery(final TupleExpr t,
+                                 final BindingSetHandler h) throws Query.IncompatibleQueryException {
         mutexUp();
 
         increment(countQueries, true);
@@ -179,6 +179,8 @@ public class QueryEngine {
         logEntry();
 
         mutexDown();
+
+        return s;
     }
 
     /**
@@ -336,6 +338,13 @@ public class QueryEngine {
     // Note: this operation doesn't need to be counted; it happens exactly once for each solution (which are counted)
     private void produceSolution(final PartialSolution r,
                                  final VarList nextBindings) {
+        // Since queries are not yet unregistered in the TripleIndex, inactive subscriptions will be encountered
+        // Even if/when queries are unregistered, a few more query answers (from the last added statement, which
+        // completed an ASK query, for example) may arrive here and need to be excluded
+        if (!r.getSubscription().isActive()) {
+            return;
+        }
+
         List<Filter> filters = r.getSubscription().getQuery().getFilters();
         BindingSet solution;
 
@@ -365,17 +374,29 @@ public class QueryEngine {
             solution = toSolutionBindings(bs, r);
         }
 
-        // apply DISTINCT
-        Set<BindingSet> distinctSet = r.getSubscription().getQuery().getDistinctSet();
-        if (null != distinctSet) {
-            if (distinctSet.contains(solution)) {
-                return;
-            } else {
-                distinctSet.add(solution);
-            }
-        }
+        Query.QueryForm form = r.getSubscription().getQuery().getQueryForm();
 
-        handleSolution(r.getSubscription().getHandler(), solution);
+        if (Query.QueryForm.ASK == form) {
+            // SesameStream's response to an ASK query which evaluates to true is an empty BindingSet
+            // A result of false is never produced, as data sources are assumed to be infinite streams
+            handleSolution(r.getSubscription().getHandler(), solution);
+
+            r.getSubscription().cancel();
+        } else if (Query.QueryForm.SELECT == form) {
+            // apply DISTINCT
+            Set<BindingSet> distinctSet = r.getSubscription().getQuery().getDistinctSet();
+            if (null != distinctSet) {
+                if (distinctSet.contains(solution)) {
+                    return;
+                } else {
+                    distinctSet.add(solution);
+                }
+            }
+
+            handleSolution(r.getSubscription().getHandler(), solution);
+        } else {
+            throw new IllegalStateException("unexpected query form: " + form);
+        }
     }
 
     private BindingSet toFilterableBindingSet(final VarList bindings) {

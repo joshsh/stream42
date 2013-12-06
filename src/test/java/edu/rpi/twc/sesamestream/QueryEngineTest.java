@@ -190,6 +190,30 @@ public class QueryEngineTest extends QueryEngineTestBase {
     }
 
     @Test
+    public void testAsk() throws Exception {
+        Collection<BindingSet> answers = continuousQueryAnswers(
+                loadData("example.nq"), loadQuery("ask-1.rq"), false);
+        // this query has 3 answers as a SELECT
+        assertEquals(1, answers.size());
+
+        answers = continuousQueryAnswers(
+                loadData("example.nq"), loadQuery("ask-2.rq"), false);
+        assertEquals(0, answers.size());
+    }
+
+    @Test(expected = Query.IncompatibleQueryException.class)
+    public void testConstruct() throws Exception {
+        continuousQueryAnswers(
+                loadData("example.nq"), loadQuery("construct.rq"), false);
+    }
+
+    @Test(expected = Query.IncompatibleQueryException.class)
+    public void testDescribe() throws Exception {
+        continuousQueryAnswers(
+                loadData("example.nq"), loadQuery("describe.rq"), false);
+    }
+
+    @Test
     public void testIrrelevantStatementsAreNotIndexed() throws Exception {
 
         queryEngine.addQuery(loadQuery("simple-join-in.rq"), new NullBindingSetHandler());

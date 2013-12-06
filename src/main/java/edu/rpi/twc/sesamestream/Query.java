@@ -1,6 +1,7 @@
 package edu.rpi.twc.sesamestream;
 
 import org.openrdf.query.BindingSet;
+import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Distinct;
 import org.openrdf.query.algebra.Exists;
 import org.openrdf.query.algebra.Extension;
@@ -13,6 +14,8 @@ import org.openrdf.query.algebra.Projection;
 import org.openrdf.query.algebra.ProjectionElem;
 import org.openrdf.query.algebra.ProjectionElemList;
 import org.openrdf.query.algebra.QueryModelNode;
+import org.openrdf.query.algebra.Reduced;
+import org.openrdf.query.algebra.Slice;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.ValueExpr;
@@ -42,6 +45,15 @@ public class Query {
 
     private Set<BindingSet> distinctSet;
 
+    /**
+     * Any of the four SPARQL query forms
+     */
+    public enum QueryForm {
+        ASK, CONSTRUCT, DESCRIBE, SELECT
+    }
+
+    private final QueryForm queryForm;
+
     public Query(final TupleExpr expr,
                  final QueryEngine.TriplePatternDeduplicator deduplicator) throws IncompatibleQueryException {
         bindingNames = new HashSet<String>();
@@ -53,17 +65,61 @@ public class Query {
             throw new IncompatibleQueryException("multiple root nodes");
         }
         QueryModelNode root = l.iterator().next();
-        Projection p = getRootProjection(root);
-        for (ProjectionElem el : p.getProjectionElemList().getElements()) {
-            addExtendedBindingName(el.getSourceName(), el.getTargetName());
-        }
 
         // TODO: eliminate redundant patterns
         Collection<StatementPattern> patterns = new LinkedList<StatementPattern>();
-        findPatterns(p, patterns);
+
+        queryForm = findQueryType(root);
+
+        if (QueryForm.SELECT == queryForm) {
+            Projection p = getRootProjection(root);
+
+            for (ProjectionElem el : p.getProjectionElemList().getElements()) {
+                addExtendedBindingName(el.getSourceName(), el.getTargetName());
+            }
+
+            findPatterns(p, patterns);
+        } else if (QueryForm.ASK == queryForm) {
+            l = visitChildren(root);
+            if (1 != l.size()) {
+                throw new IncompatibleQueryException("exactly one node expected beneath Slice in ASK query");
+            }
+
+            QueryModelNode j = l.get(0);
+            if (j instanceof Join) {
+                findPatterns((Join) j, patterns);
+            } else if (j instanceof Filter) {
+                findPatterns((Filter) j, patterns);
+            } else {
+                throw new IncompatibleQueryException("Join expected beneath Slice in ASK query; found " + j);
+            }
+        } else {
+            throw new IncompatibleQueryException(queryForm.name() + " query form is currently not supported");
+        }
 
         for (StatementPattern pat : patterns) {
             graphPattern = graphPattern.push(deduplicator.deduplicate(new TriplePattern(pat)));
+        }
+    }
+
+    /**
+     * @return the query form of this query (ASK, CONSTRUCT, DECRIBE, or SELECT)
+     */
+    public QueryForm getQueryForm() {
+        return queryForm;
+    }
+
+    private static QueryForm findQueryType(final QueryModelNode root) throws IncompatibleQueryException {
+        if (root instanceof Slice) {
+            return QueryForm.ASK;
+        } else if (root instanceof Reduced) {
+            return QueryForm.CONSTRUCT;
+        } else if (root instanceof DescribeOperator) {
+            return QueryForm.DESCRIBE;
+        } else if (root instanceof Projection || root instanceof Distinct) {
+            return QueryForm.SELECT;
+        } else {
+            throw new IncompatibleQueryException("could not infer type of query from root node: " + root);
         }
     }
 
@@ -87,7 +143,7 @@ public class Query {
             QueryModelNode child = l.get(0);
             return getRootProjection(child);
         } else {
-            throw new IncompatibleQueryException("expected Projection at root node of query; found " + root);
+            throw new IncompatibleQueryException("expected Projection or Distinct at root node of query; found " + root);
         }
     }
 
