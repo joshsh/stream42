@@ -1,6 +1,5 @@
 package edu.rpi.twc.sesamestream;
 
-import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Distinct;
 import org.openrdf.query.algebra.Exists;
@@ -43,7 +42,7 @@ public class Query {
     private LList<TriplePattern> graphPattern;
     private List<Filter> filters;
 
-    private Set<BindingSet> distinctSet;
+    private final SolutionSequenceModifier sequenceModifier = new SolutionSequenceModifier();
 
     /**
      * Any of the four SPARQL query forms
@@ -59,6 +58,8 @@ public class Query {
         bindingNames = new HashSet<String>();
 
         graphPattern = LList.NIL;
+
+        //System.out.println("query: " + expr);
 
         List<QueryModelNode> l = visit(expr);
         if (l.size() != 1) {
@@ -113,7 +114,12 @@ public class Query {
 
     private static QueryForm findQueryType(final QueryModelNode root) throws IncompatibleQueryException {
         if (root instanceof Slice) {
-            return QueryForm.ASK;
+            Slice s = (Slice) root;
+            if (s.hasLimit() || s.hasOffset()) {
+                return QueryForm.SELECT;
+            } else {
+                return QueryForm.ASK;
+            }
         } else if (root instanceof Reduced) {
             return QueryForm.CONSTRUCT;
         } else if (root instanceof DescribeOperator) {
@@ -125,25 +131,33 @@ public class Query {
         }
     }
 
-    private void makeDistinct() {
-        if (null == distinctSet) {
-            distinctSet = new HashSet<BindingSet>();
-        }
-    }
-
     private Projection getRootProjection(final QueryModelNode root) throws IncompatibleQueryException {
         if (root instanceof Projection) {
             return (Projection) root;
         } else if (root instanceof Distinct) {
-            makeDistinct();
+            sequenceModifier.makeDistinct();
 
             List<QueryModelNode> l = visitChildren(root);
             if (1 != l.size()) {
                 throw new IncompatibleQueryException("exactly one node expected beneath DISTINCT");
             }
 
-            QueryModelNode child = l.get(0);
-            return getRootProjection(child);
+            return getRootProjection(l.get(0));
+        } else if (root instanceof Slice) {
+            Slice s = (Slice) root;
+            if (s.hasLimit()) {
+                sequenceModifier.setLimit(s.getLimit());
+            }
+            if (s.hasOffset()) {
+                sequenceModifier.setOffset(s.getOffset());
+            }
+
+            List<QueryModelNode> l = visitChildren(root);
+            if (1 != l.size()) {
+                throw new IncompatibleQueryException("exactly one node expected beneath Slice");
+            }
+
+            return getRootProjection(l.get(0));
         } else {
             throw new IncompatibleQueryException("expected Projection or Distinct at root node of query; found " + root);
         }
@@ -180,10 +194,10 @@ public class Query {
     }
 
     /**
-     * @return if this query uses DISTINCT, the set of distinct solutions already found.  Otherwise <code>null</code>
+     * @return an object which represents this query's DISTINCT/REDUCED, OFFSET, and LIMIT behavior
      */
-    public Set<BindingSet> getDistinctSet() {
-        return distinctSet;
+    public SolutionSequenceModifier getSequenceModifier() {
+        return sequenceModifier;
     }
 
     private void findPatterns(final StatementPattern p,

@@ -383,17 +383,9 @@ public class QueryEngine {
 
             r.getSubscription().cancel();
         } else if (Query.QueryForm.SELECT == form) {
-            // apply DISTINCT
-            Set<BindingSet> distinctSet = r.getSubscription().getQuery().getDistinctSet();
-            if (null != distinctSet) {
-                if (distinctSet.contains(solution)) {
-                    return;
-                } else {
-                    distinctSet.add(solution);
-                }
+            if (r.getSubscription().getQuery().getSequenceModifier().trySolution(solution, r.getSubscription())) {
+                handleSolution(r.getSubscription().getHandler(), solution);
             }
-
-            handleSolution(r.getSubscription().getHandler(), solution);
         } else {
             throw new IllegalStateException("unexpected query form: " + form);
         }

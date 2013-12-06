@@ -190,6 +190,21 @@ public class QueryEngineTest extends QueryEngineTestBase {
     }
 
     @Test
+    public void testLimitAndOffset() throws Exception {
+        Collection<BindingSet> answers;
+
+        answers = continuousQueryAnswers(loadData("example.nq"),
+                loadQuery("limit.rq"), false);
+        // there would be 5 answers without the LIMIT
+        assertEquals(2, answers.size());
+
+        answers = continuousQueryAnswers(loadData("example.nq"),
+                loadQuery("offset.rq"), false);
+        // there would be 5 answers without the OFFSET
+        assertEquals(3, answers.size());
+    }
+
+    @Test
     public void testAsk() throws Exception {
         Collection<BindingSet> answers = continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("ask-1.rq"), false);

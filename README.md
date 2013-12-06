@@ -43,13 +43,15 @@ Send questions or comments to:
 ### Syntax reference
 
 SPARQL syntax currently supported by SesameStream includes:
-* [SELECT](http://www.w3.org/TR/sparql11-query/#select) queries.  SELECT subscriptions in SesameStream produce query answers indefinitely unless cancelled
+* [SELECT](http://www.w3.org/TR/sparql11-query/#select) queries.  SELECT subscriptions in SesameStream produce query answers indefinitely unless cancelled.
 * [ASK](http://www.w3.org/TR/sparql11-query/#ask) queries.  ASK subscriptions produce at most one query answer (indicating a result of **true**) and then are cancelled automatically
 * [basic graph patterns](http://www.w3.org/TR/sparql11-query/#BasicGraphPatterns)
 * [variable projection](http://www.w3.org/TR/sparql11-query/#modProjection)
 * all [RDF Term syntax](http://www.w3.org/TR/sparql11-query/#syntaxTerms) and [triple pattern](http://www.w3.org/TR/sparql11-query/#QSynTriples) syntax via Sesame
 * [FILTER](http://www.w3.org/TR/sparql11-query/#tests) constraints, with all SPARQL [operator functions](http://www.w3.org/TR/sparql11-query/#SparqlOps) supported via Sesame **except for** [EXISTS](http://www.w3.org/TR/sparql11-query/#func-filter-exists)
 * [DISTINCT](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier.  Use with care if the streaming data source may produce an unlimited number of solutions
+* [LIMIT](http://www.w3.org/TR/sparql11-query/#modResultLimit) clause.  Once LIMIT number of answers have been produced, the subscription is cancelled.
+* [OFFSET](http://www.w3.org/TR/sparql11-query/#modOffset) clause.  Since query answers roughly follow the order in which input statements are received, OFFSET can be practically useful even without ORDER BY (see below)
 
 Syntax explicitly not supported:
 * [ORDER BY](http://www.w3.org/TR/sparql11-query/#modOrderBy).  This is a closed-world operation which requires a finite data set or window; SesameStream queries over a stream of data and an infinite window.
@@ -59,7 +61,6 @@ Syntax not yet supported:
 * [CONSTRUCT](http://www.w3.org/TR/sparql11-query/#construct) and [DESCRIBE](http://www.w3.org/TR/sparql11-query/#describe) query forms
 * [OPTIONAL](http://www.w3.org/TR/sparql11-query/#optionals) and [UNION](http://www.w3.org/TR/sparql11-query/#alternatives) patterns, [group graph patterns](http://www.w3.org/TR/sparql11-query/#GroupPatterns)
 * [RDF Dataset syntax](http://www.w3.org/TR/sparql11-query/#rdfDataset), i.e. the FROM, FROM NAMED, and GRAPH keywords
-* [LIMIT](http://www.w3.org/TR/sparql11-query/#modResultLimit) and [OFFSET](http://www.w3.org/TR/sparql11-query/#modOffset) clauses
 * [REDUCED](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier
 * SPARQL 1.1's [NOT](http://www.w3.org/TR/sparql11-query/#negation), [Property Paths](http://www.w3.org/TR/sparql11-query/#propertypaths), [assignment](http://www.w3.org/TR/sparql11-query/#assignment) (BIND / AS / VALUES), [subqueries](http://www.w3.org/TR/sparql11-query/#subqueries)
 * SPARQL 1.1 [Federated Query](http://www.w3.org/TR/sparql11-federated-query/) syntax
