@@ -4,6 +4,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.openrdf.model.Statement;
+import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.TupleExpr;
@@ -13,6 +15,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -20,6 +23,8 @@ import static org.junit.Assert.assertTrue;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class QueryEngineTest extends QueryEngineTestBase {
+
+    private ValueFactory valueFactory = new ValueFactoryImpl();
 
     @Before
     public void setUp() throws Exception {
@@ -120,11 +125,32 @@ public class QueryEngineTest extends QueryEngineTestBase {
     public void testDistinct() throws Exception {
         Collection<BindingSet> answers = continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("exponential-join-nodistinct.rq"), false);
-        assertTrue(answers.size() > 5);
+        assertTrue(answers.size() > 9);
 
         answers = continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("exponential-join-distinct.rq"), false);
-        assertEquals(5, answers.size());
+        assertEquals(9, answers.size());
+    }
+
+    @Test
+    public void testReduced() throws Exception {
+        long overflow = SesameStream.getReducedModifierCapacity();
+        SesameStream.setReducedModifierCapacity(2);
+        try {
+            int raw = continuousQueryAnswers(
+                    loadData("example.nq"), loadQuery("exponential-join-nodistinct.rq"), false).size();
+
+            int distinct = continuousQueryAnswers(
+                    loadData("example.nq"), loadQuery("exponential-join-distinct.rq"), false).size();
+
+            int reduced = continuousQueryAnswers(
+                    loadData("example.nq"), loadQuery("exponential-join-reduced.rq"), false).size();
+
+            assertTrue(reduced < raw);
+            assertTrue(reduced > distinct);
+        } finally {
+            SesameStream.setReducedModifierCapacity(overflow);
+        }
     }
 
     @Test
@@ -216,10 +242,16 @@ public class QueryEngineTest extends QueryEngineTestBase {
         assertEquals(0, answers.size());
     }
 
-    @Test(expected = Query.IncompatibleQueryException.class)
+    @Test
     public void testConstruct() throws Exception {
-        continuousQueryAnswers(
+        Collection<BindingSet> answers = continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("construct.rq"), false);
+        assertTrue(answers.size() >= 5);
+        for (BindingSet b : answers) {
+            assertNotNull(b.getValue("subject"));
+            assertEquals(valueFactory.createURI("http://xmlns.com/foaf/0.1/name"), b.getValue("predicate"));
+            assertNotNull(b.getValue("object"));
+        }
     }
 
     @Test(expected = Query.IncompatibleQueryException.class)

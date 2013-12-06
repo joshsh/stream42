@@ -1,5 +1,6 @@
 package edu.rpi.twc.sesamestream;
 
+import org.openrdf.query.Binding;
 import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Distinct;
 import org.openrdf.query.algebra.Exists;
@@ -17,8 +18,11 @@ import org.openrdf.query.algebra.Reduced;
 import org.openrdf.query.algebra.Slice;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.query.algebra.ValueConstant;
 import org.openrdf.query.algebra.ValueExpr;
+import org.openrdf.query.algebra.Var;
 import org.openrdf.query.algebra.helpers.TupleExprs;
+import org.openrdf.query.impl.BindingImpl;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,10 +41,13 @@ import java.util.logging.Logger;
 public class Query {
     private static final Logger LOGGER = Logger.getLogger(Query.class.getName());
 
+    private static final String CONST_PREFIX = "-const-";
+
     private final Set<String> bindingNames;
     private Map<String, String> extendedBindingNames;
     private LList<TriplePattern> graphPattern;
     private List<Filter> filters;
+    private Set<Binding> constants;
 
     private final SolutionSequenceModifier sequenceModifier = new SolutionSequenceModifier();
 
@@ -73,29 +80,29 @@ public class Query {
         queryForm = findQueryType(root);
 
         if (QueryForm.SELECT == queryForm) {
-            Projection p = getRootProjection(root);
+            findPatternsInRoot(root, patterns);
 
+            /*
+            Extension ext = null;
             for (ProjectionElem el : p.getProjectionElemList().getElements()) {
-                addExtendedBindingName(el.getSourceName(), el.getTargetName());
-            }
+                String source = el.getSourceName();
 
-            findPatterns(p, patterns);
-        } else if (QueryForm.ASK == queryForm) {
-            l = visitChildren(root);
-            if (1 != l.size()) {
-                throw new IncompatibleQueryException("exactly one node expected beneath Slice in ASK query");
-            }
+                if (source.startsWith("-const-")) {
+                    if (null == ext) {
+                        TupleExpr te = p.getArg();
+                        if (!(te instanceof Extension)) {
+                            throw new IncompatibleQueryException("expected Extension under Projection; found " + te);
+                        }
+                        ext = (Extension) te;
+                    }
 
-            QueryModelNode n = l.get(0);
-            if (n instanceof Join) {
-                findPatterns((Join) n, patterns);
-            } else if (n instanceof StatementPattern) {
-                findPatterns((StatementPattern) n, patterns);
-            } else if (n instanceof Filter) {
-                findPatterns((Filter) n, patterns);
-            } else {
-                throw new IncompatibleQueryException("Join expected beneath Slice in ASK query; found " + n);
-            }
+
+                } else {
+                    addExtendedBindingName(el.getSourceName(), el.getTargetName());
+                }
+            }*/
+
+            //findPatterns(p, patterns);
         } else {
             throw new IncompatibleQueryException(queryForm.name() + " query form is currently not supported");
         }
@@ -112,54 +119,29 @@ public class Query {
         return queryForm;
     }
 
-    private static QueryForm findQueryType(final QueryModelNode root) throws IncompatibleQueryException {
-        if (root instanceof Slice) {
-            Slice s = (Slice) root;
-            if (s.hasLimit() || s.hasOffset()) {
-                return QueryForm.SELECT;
-            } else {
-                return QueryForm.ASK;
-            }
-        } else if (root instanceof Reduced) {
-            return QueryForm.CONSTRUCT;
-        } else if (root instanceof DescribeOperator) {
-            return QueryForm.DESCRIBE;
-        } else if (root instanceof Projection || root instanceof Distinct) {
-            return QueryForm.SELECT;
-        } else {
-            throw new IncompatibleQueryException("could not infer type of query from root node: " + root);
-        }
+    /**
+     * @return any predefined bindings which are to be added to query solutions.
+     *         For example, CONSTRUCT queries may bind constants to the subject, predicate, or object variable
+     */
+    public Set<Binding> getConstants() {
+        return constants;
     }
 
-    private Projection getRootProjection(final QueryModelNode root) throws IncompatibleQueryException {
-        if (root instanceof Projection) {
-            return (Projection) root;
-        } else if (root instanceof Distinct) {
-            sequenceModifier.makeDistinct();
-
-            List<QueryModelNode> l = visitChildren(root);
-            if (1 != l.size()) {
-                throw new IncompatibleQueryException("exactly one node expected beneath DISTINCT");
-            }
-
-            return getRootProjection(l.get(0));
-        } else if (root instanceof Slice) {
-            Slice s = (Slice) root;
-            if (s.hasLimit()) {
-                sequenceModifier.setLimit(s.getLimit());
-            }
-            if (s.hasOffset()) {
-                sequenceModifier.setOffset(s.getOffset());
-            }
-
-            List<QueryModelNode> l = visitChildren(root);
-            if (1 != l.size()) {
-                throw new IncompatibleQueryException("exactly one node expected beneath Slice");
-            }
-
-            return getRootProjection(l.get(0));
+    private static QueryForm findQueryType(final QueryModelNode root) throws IncompatibleQueryException {
+        if (root instanceof Slice) {
+            // note: ASK queries also have Slice as root in Sesame, but we treat them as SELECT queries
+            return QueryForm.SELECT;
+        } else if (root instanceof Reduced) {
+            // note: CONSTRUCT queries also have Reduced as root in Sesame, but this is because they have
+            // been transformed to SELECT queries for {?subject, ?predicate, ?object}.
+            // We simply treat them as SELECT queries.
+            return QueryForm.SELECT;
+        } else if (root instanceof Projection || root instanceof Distinct) {
+            return QueryForm.SELECT;
+        } else if (root instanceof DescribeOperator) {
+            return QueryForm.DESCRIBE;
         } else {
-            throw new IncompatibleQueryException("expected Projection or Distinct at root node of query; found " + root);
+            throw new IncompatibleQueryException("could not infer type of query from root node: " + root);
         }
     }
 
@@ -198,6 +180,52 @@ public class Query {
      */
     public SolutionSequenceModifier getSequenceModifier() {
         return sequenceModifier;
+    }
+
+    private void findPatternsInRoot(final QueryModelNode root,
+                                    final Collection<StatementPattern> patterns) throws IncompatibleQueryException {
+        if (root instanceof Projection) {
+            findPatterns((Projection) root, patterns);
+        } else if (root instanceof Join) {
+            findPatterns((Join) root, patterns);
+        } else if (root instanceof Filter) {
+            findPatterns((Filter) root, patterns);
+        } else if (root instanceof Distinct) {
+            sequenceModifier.makeDistinct();
+
+            List<QueryModelNode> l = visitChildren(root);
+            if (1 != l.size()) {
+                throw new IncompatibleQueryException("exactly one node expected beneath DISTINCT");
+            }
+
+            findPatternsInRoot(l.get(0), patterns);
+        } else if (root instanceof Reduced) {
+            sequenceModifier.makeReduced();
+
+            List<QueryModelNode> l = visitChildren(root);
+            if (1 != l.size()) {
+                throw new IncompatibleQueryException("exactly one node expected beneath DISTINCT");
+            }
+
+            findPatternsInRoot(l.get(0), patterns);
+        } else if (root instanceof Slice) {
+            Slice s = (Slice) root;
+            if (s.hasLimit()) {
+                sequenceModifier.setLimit(s.getLimit());
+            }
+            if (s.hasOffset()) {
+                sequenceModifier.setOffset(s.getOffset());
+            }
+
+            List<QueryModelNode> l = visitChildren(root);
+            if (1 != l.size()) {
+                throw new IncompatibleQueryException("exactly one node expected beneath Slice");
+            }
+
+            findPatternsInRoot(l.get(0), patterns);
+        } else {
+            throw new IncompatibleQueryException("expected Projection or Distinct at root node of query; found " + root);
+        }
     }
 
     private void findPatterns(final StatementPattern p,
@@ -304,11 +332,30 @@ public class Query {
             } else if (n instanceof Filter) {
                 findPatterns((Filter) n, patterns);
             } else if (n instanceof ProjectionElemList) {
-                // TODO: remind self why these are ignored
+                // TODO: remind self when these are encountered and why they are ignored
                 //LOGGER.info("ignoring " + n);
             } else if (n instanceof ExtensionElem) {
-                // TODO: remind self why these are ignored
-                //LOGGER.info("ignoring " + n);
+                ExtensionElem ee = (ExtensionElem) n;
+
+                ValueExpr ve = ee.getExpr();
+                if (ve instanceof ValueConstant) {
+                    String name = ee.getName();
+                    String target = extendedBindingNames.get(name);
+
+                    if (null == target) {
+                        throw new IncompatibleQueryException("ExtensionElem does not correspond to a projection variable");
+                    }
+
+                    ValueConstant vc = (ValueConstant) ve;
+                    if (null == constants) {
+                        constants = new HashSet<Binding>();
+                    }
+                    constants.add(new BindingImpl(target, vc.getValue()));
+                } else if (ve instanceof Var) {
+                    // do nothing; the source-->target mapping is already in the extended binding names
+                } else {
+                    throw new IncompatibleQueryException("expected ValueConstant or Var within ExtensionElem; found " + ve);
+                }
             } else if (n instanceof Order) {
                 throw new IncompatibleQueryException("the ORDER BY modifier is not supported by SesameStream");
             } else {

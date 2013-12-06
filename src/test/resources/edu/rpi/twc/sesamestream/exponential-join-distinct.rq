@@ -1,8 +1,8 @@
-PREFIX ex: <http://example.org/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 
-SELECT DISTINCT ?z WHERE {
-    ex:arthur foaf:knows ?x .
+SELECT DISTINCT ?x ?b WHERE {
     ?x foaf:knows ?y .
     ?y foaf:knows ?z .
+    ?z foaf:knows ?a .
+    ?a foaf:knows ?b .
 }

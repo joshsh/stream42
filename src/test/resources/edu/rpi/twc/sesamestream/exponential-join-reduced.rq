@@ -1,6 +1,6 @@
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 
-SELECT ?x ?b WHERE {
+SELECT REDUCED ?x ?b WHERE {
     ?x foaf:knows ?y .
     ?y foaf:knows ?z .
     ?z foaf:knows ?a .

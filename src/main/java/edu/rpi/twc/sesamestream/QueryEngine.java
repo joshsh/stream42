@@ -8,6 +8,7 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.query.Binding;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.algebra.Filter;
@@ -338,6 +339,8 @@ public class QueryEngine {
     // Note: this operation doesn't need to be counted; it happens exactly once for each solution (which are counted)
     private void produceSolution(final PartialSolution r,
                                  final VarList nextBindings) {
+        Query q = r.getSubscription().getQuery();
+
         // Since queries are not yet unregistered in the TripleIndex, inactive subscriptions will be encountered
         // Even if/when queries are unregistered, a few more query answers (from the last added statement, which
         // completed an ASK query, for example) may arrive here and need to be excluded
@@ -345,8 +348,8 @@ public class QueryEngine {
             return;
         }
 
-        List<Filter> filters = r.getSubscription().getQuery().getFilters();
-        BindingSet solution;
+        List<Filter> filters = q.getFilters();
+        MapBindingSet solution;
 
         if (null == filters) {
             // if there are no filters, it is more efficient not to create an intermediate BindingSet
@@ -374,16 +377,19 @@ public class QueryEngine {
             solution = toSolutionBindings(bs, r);
         }
 
-        Query.QueryForm form = r.getSubscription().getQuery().getQueryForm();
+        // adding constants after filter application assumes that one will never filter on constants
+        if (null != q.getConstants()) {
+            for (Binding b : q.getConstants()) {
+                solution.addBinding(b);
+            }
+        }
 
-        if (Query.QueryForm.ASK == form) {
-            // SesameStream's response to an ASK query which evaluates to true is an empty BindingSet
-            // A result of false is never produced, as data sources are assumed to be infinite streams
-            handleSolution(r.getSubscription().getHandler(), solution);
+        Query.QueryForm form = q.getQueryForm();
 
-            r.getSubscription().cancel();
-        } else if (Query.QueryForm.SELECT == form) {
-            if (r.getSubscription().getQuery().getSequenceModifier().trySolution(solution, r.getSubscription())) {
+        // note: SesameStream's response to an ASK query which evaluates to true is an empty BindingSet
+        // A result of false is never produced, as data sources are assumed to be infinite streams
+        if (Query.QueryForm.SELECT == form) {
+            if (q.getSequenceModifier().trySolution(solution, r.getSubscription())) {
                 handleSolution(r.getSubscription().getHandler(), solution);
             }
         } else {
@@ -404,8 +410,8 @@ public class QueryEngine {
         return bs;
     }
 
-    private BindingSet toSolutionBindings(final BindingSet bs,
-                                          final PartialSolution r) {
+    private MapBindingSet toSolutionBindings(final BindingSet bs,
+                                             final PartialSolution r) {
         MapBindingSet newBindings = new MapBindingSet();
 
         Set<String> names = r.getSubscription().getQuery().getBindingNames();
@@ -436,8 +442,8 @@ public class QueryEngine {
         return newBindings;
     }
 
-    private BindingSet toSolutionBindings(final VarList bindings,
-                                          final PartialSolution r) {
+    private MapBindingSet toSolutionBindings(final VarList bindings,
+                                             final PartialSolution r) {
         MapBindingSet newBindings = new MapBindingSet();
 
         Set<String> names = r.getSubscription().getQuery().getBindingNames();

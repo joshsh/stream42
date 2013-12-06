@@ -10,14 +10,26 @@ import java.util.Set;
  */
 public class SolutionSequenceModifier {
     private Set<BindingSet> distinctSet;
-    private long limit = -1;
+    private boolean hasReduced = false;
 
+    private long limit = -1;
     private long count = 0;
 
+    /**
+     * Mark the associated query with a DISTINCT modifier
+     */
     public void makeDistinct() {
         if (null == distinctSet) {
             distinctSet = new HashSet<BindingSet>();
         }
+    }
+
+    /**
+     * Mark the associated query with a REDUCE modifier
+     */
+    public void makeReduced() {
+        makeDistinct();
+        hasReduced = true;
     }
 
     /**
@@ -59,11 +71,19 @@ public class SolutionSequenceModifier {
      */
     public boolean trySolution(final BindingSet solution,
                                final Subscription subs) {
-        // apply DISTINCT before LIMIT and OFFSET
+        // apply DISTINCT and REDUCE before OFFSET and LIMIT
         if (null != distinctSet) {
             if (distinctSet.contains(solution)) {
                 return false;
             } else {
+                // this is REDUCED, which in SesameStream only allows the distinct set to grow to a specified size
+                // Currently, the set is simply cleared when it overflows
+                if (hasReduced) {
+                    if (distinctSet.size() >= SesameStream.getReducedModifierCapacity()) {
+                        distinctSet.clear();
+                    }
+                }
+
                 distinctSet.add(solution);
             }
         }
