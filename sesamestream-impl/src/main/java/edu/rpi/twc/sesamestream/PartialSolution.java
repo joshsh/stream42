@@ -2,7 +2,7 @@ package edu.rpi.twc.sesamestream;
 
 /**
  * An intermediate result in the answering of a continuous query.
- * It contains a {@link Subscription}, zero or more already-completed bindings of variables to values,
+ * It contains a {@link SubscriptionImpl}, zero or more already-completed bindings of variables to values,
  * and a basic graph pattern (BGP) of one or more still-to-be-matched triple patterns.
  * Logically, a SesameStream query engine's index is a set of <code>PartialSolution</code>s.
  *
@@ -10,7 +10,7 @@ package edu.rpi.twc.sesamestream;
  */
 public class PartialSolution {
 
-    private final Subscription subscription;
+    private final SubscriptionImpl subscription;
 
     private final LList<TriplePattern> graphPattern;
 
@@ -22,7 +22,7 @@ public class PartialSolution {
      *
      * @param subscription an object containing the query and the handler for query results
      */
-    public PartialSolution(final Subscription subscription) {
+    public PartialSolution(final SubscriptionImpl subscription) {
         this.subscription = subscription;
 
         bindings = null;
@@ -38,7 +38,7 @@ public class PartialSolution {
      * @param graphPattern the still-to-be-matched RDF triple patterns
      * @param bindings the already-completed bindings of variables to values
      */
-    public PartialSolution(final Subscription subscription,
+    public PartialSolution(final SubscriptionImpl subscription,
                            final LList<TriplePattern> graphPattern,
                            final VarList bindings) {
         this.subscription = subscription;
@@ -63,7 +63,7 @@ public class PartialSolution {
     /**
      * @return the subscription to which any complete solutions to this <code>PartialSolution</code> will be delivered
      */
-    public Subscription getSubscription() {
+    public SubscriptionImpl getSubscription() {
         return subscription;
     }
 

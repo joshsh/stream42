@@ -5,18 +5,26 @@ package edu.rpi.twc.sesamestream;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class Subscription {
+public class SubscriptionImpl implements Subscription {
     private final Query query;
     private final BindingSetHandler handler;
     private boolean active;
 
-    public Subscription(final Query query,
-                        final BindingSetHandler handler) {
+    private static long maxId = 0;
+
+    private final String id;
+
+    public SubscriptionImpl(final Query query,
+                            final BindingSetHandler handler) {
         this.query = query;
         this.handler = handler;
 
-        // always active
         this.active = true;
+        this.id = "" + ++maxId;
+    }
+
+    public String getId() {
+        return id;
     }
 
     /**
@@ -33,17 +41,10 @@ public class Subscription {
         return handler;
     }
 
-    /**
-     * @return whether this subscription is still registered with the {@link QueryEngine}
-     * (occupying resources and potentially receiving and handling query results)
-     */
     public boolean isActive() {
         return active;
     }
 
-    /**
-     * marks this subscription as inactive, so that the query no longer receives results
-     */
     public void cancel() {
         active = false;
 

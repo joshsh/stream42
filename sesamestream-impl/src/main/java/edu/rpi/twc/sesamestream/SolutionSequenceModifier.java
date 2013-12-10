@@ -70,7 +70,7 @@ public class SolutionSequenceModifier {
      * @return whether to produce the solution as an answer
      */
     public boolean trySolution(final BindingSet solution,
-                               final Subscription subs) {
+                               final SubscriptionImpl subs) {
         // apply DISTINCT and REDUCE before OFFSET and LIMIT
         if (null != distinctSet) {
             if (distinctSet.contains(solution)) {

@@ -171,7 +171,7 @@ public class QueryEngine {
 
         Query q = new Query(t, deduplicator);
 
-        Subscription s = new Subscription(q, h);
+        SubscriptionImpl s = new SubscriptionImpl(q, h);
 
         PartialSolution query = new PartialSolution(s);
         addPartialSolution(query);
