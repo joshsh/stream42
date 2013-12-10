@@ -36,15 +36,11 @@
             <artifactId>linked-data-sail</artifactId>
             <version>${ripple.version}</version>
         </dependency>
-        <!--<dependency>
-            <groupId>net.fortytwo.sesametools</groupId>
-            <artifactId>nquads</artifactId>
-            <version>${sesametools.version}</version>
-        </dependency>-->
         <dependency>
             <groupId>org.openrdf.sesame</groupId>
             <artifactId>sesame-rio-ntriples</artifactId>
             <version>${sesame.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.openrdf.sesame</groupId>

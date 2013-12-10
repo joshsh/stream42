@@ -1,7 +1,10 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
+import edu.rpi.twc.sesamestream.BindingSetHandler;
+import edu.rpi.twc.sesamestream.QueryEngine;
+import edu.rpi.twc.sesamestream.SesameStream;
 import edu.rpi.twc.sesamestream.etc.QueryEngineTestBase;
-import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
+import info.aduna.io.IOUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,6 +16,7 @@ import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.sail.memory.MemoryStore;
 
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -24,7 +28,9 @@ import static org.junit.Assert.assertTrue;
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class QueryEngineTest extends QueryEngineTestBase {
+public class QueryEngineImplTest extends QueryEngineTestBase {
+
+    private static final String[] LUBM_QUERIES = {"q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q11", "q12", "q13", "q14"};
 
     private ValueFactory valueFactory = new ValueFactoryImpl();
 
@@ -39,6 +45,28 @@ public class QueryEngineTest extends QueryEngineTestBase {
     @After
     public void tearDown() throws Exception {
         sail.shutDown();
+    }
+
+    @Test
+    public void testAddLubmQueries() throws Exception {
+        QueryEngineImpl engine = new QueryEngineImpl();
+
+        BindingSetHandler bsh = new BindingSetHandler() {
+            public void handle(BindingSet result) {
+                // Do nothing.
+            }
+        };
+
+        for (String q : LUBM_QUERIES) {
+            String name = "lubm/" + q + ".rq";
+            InputStream in = SesameStream.class.getResourceAsStream(name);
+            try {
+                String query = IOUtil.readString(in);
+                engine.addQuery(query, bsh);
+            }   finally {
+                in.close();
+            }
+        }
     }
 
     /*
