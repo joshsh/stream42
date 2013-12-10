@@ -1,8 +1,10 @@
 <!-- This README can be viewed at https://github.com/joshsh/sesamestream/wiki -->
 
+## SesameStream
+
 ![SesameStream logo|width=94px|height=65px](https://github.com/joshsh/sesamestream/wiki/graphics/sesamestream-logo-small.png)
 
-SesameStream is a continuous SPARQL query engine for real-time applications, built with the [Sesame](http://www.openrdf.org/) RDF framework.  It implements a basic subset of the [SPARQL](http://www.w3.org/TR/sparql11-query/) query language (see below) and matches streaming RDF data against these queries with very low latency, responding to individual statements with the query answers they complete.  The query engine conserves resources by indexing only those statements which match against already-submitted queries, making it appropriate for processing long, noisy data streams.  SesameStream was developed for use in [wearable and ubiquitous computing](https://github.com/joshsh/extendo) contexts in which sensor data must be combined with background semantics under real time constraints of a few tens of milliseconds.
+SesameStream is a continuous SPARQL query engine for real-time applications, built with the [Sesame](http://www.openrdf.org/) RDF framework.  It implements a subset (see below) of the [SPARQL](http://www.w3.org/TR/sparql11-query/) query language and matches streaming RDF data against queries with low latency, responding to individual statements with the query answers they complete.  The query engine conserves resources by indexing only those statements which match against already-submitted queries, making it appropriate for processing long, noisy data streams.  SesameStream was developed for use in [wearable and ubiquitous computing](https://github.com/joshsh/extendo) contexts in which sensor data must be combined with background semantics under real time constraints of a few tens of milliseconds.
 
 Here is a usage example in Java:
 
@@ -30,6 +32,9 @@ for (Statement s : data) {
     // as new statements are added, query results will be pushed to the BindingSetHandler
     queryEngine.addStatement(s);        
 }
+
+// cancel the query subscription at any time
+sub.cancel();
 ```
 
 See also:
@@ -51,7 +56,7 @@ SPARQL syntax currently supported by SesameStream includes:
 * all [RDF Term syntax](http://www.w3.org/TR/sparql11-query/#syntaxTerms) and [triple pattern](http://www.w3.org/TR/sparql11-query/#QSynTriples) syntax via Sesame
 * [FILTER](http://www.w3.org/TR/sparql11-query/#tests) constraints, with all SPARQL [operator functions](http://www.w3.org/TR/sparql11-query/#SparqlOps) supported via Sesame **except for** [EXISTS](http://www.w3.org/TR/sparql11-query/#func-filter-exists)
 * [DISTINCT](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier.  Use with care if the streaming data source may produce an unlimited number of solutions.
-* [REDUCED](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier.  Similar to DISTINCT, but safe for long streams.  Each subscription maintains a solution set which begins to recycle after it reaches a certain size, configurable with `SesameStream.setReducedModifierOverflow()`.
+* [REDUCED](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier.  Similar to DISTINCT, but safe for long streams.  Each subscription maintains a solution set which begins to recycle after it reaches a certain size, configurable with `SesameStream.setReducedModifierCapacity()`.
 * [LIMIT](http://www.w3.org/TR/sparql11-query/#modResultLimit) clause.  Once LIMIT number of answers have been produced, the subscription is cancelled.
 * [OFFSET](http://www.w3.org/TR/sparql11-query/#modOffset) clause.  Since query answers roughly follow the order in which input statements are received, OFFSET can be practically useful even without ORDER BY (see below)
 

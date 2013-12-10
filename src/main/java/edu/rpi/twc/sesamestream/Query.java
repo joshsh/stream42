@@ -41,8 +41,6 @@ import java.util.logging.Logger;
 public class Query {
     private static final Logger LOGGER = Logger.getLogger(Query.class.getName());
 
-    private static final String CONST_PREFIX = "-const-";
-
     private final Set<String> bindingNames;
     private Map<String, String> extendedBindingNames;
     private LList<TriplePattern> graphPattern;
@@ -81,28 +79,6 @@ public class Query {
 
         if (QueryForm.SELECT == queryForm) {
             findPatternsInRoot(root, patterns);
-
-            /*
-            Extension ext = null;
-            for (ProjectionElem el : p.getProjectionElemList().getElements()) {
-                String source = el.getSourceName();
-
-                if (source.startsWith("-const-")) {
-                    if (null == ext) {
-                        TupleExpr te = p.getArg();
-                        if (!(te instanceof Extension)) {
-                            throw new IncompatibleQueryException("expected Extension under Projection; found " + te);
-                        }
-                        ext = (Extension) te;
-                    }
-
-
-                } else {
-                    addExtendedBindingName(el.getSourceName(), el.getTargetName());
-                }
-            }*/
-
-            //findPatterns(p, patterns);
         } else {
             throw new IncompatibleQueryException(queryForm.name() + " query form is currently not supported");
         }
