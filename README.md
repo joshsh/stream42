@@ -9,31 +9,26 @@ SesameStream is a continuous SPARQL query engine for real-time applications, bui
 Here is a usage example in Java:
 
 ```java
-String queryStr = "SELECT ?foo ?bar WHERE { ... }";
-    
-ParsedQuery query = QueryParserUtil.parseQuery(
-        QueryLanguage.SPARQL,
-        queryStr,
-        "http://example.org/baseURI");
+String query = "SELECT ?foo ?bar WHERE { ... }";
 
-QueryEngine queryEngine = new QueryEngine();
+QueryEngine queryEngine = new QueryEngineImpl();
 
 BindingSetHandler handler = new BindingSetHandler() {
-    public void handle(final BindingSet bindings) {
-        LOGGER.info("found a result for the continuous query");
-        // do something useful with the BindingSet (query result)
+    public void handle(final BindingSet answer) {
+        System.out.println("found an answer to the continuous query: " + answer);
     }
 };
-Subscription sub = queryEngine.addQuery(query.getTupleExpr(), handler);    
-    
+Subscription sub = queryEngine.addQuery(query, handler);    
+
 // normally, this would be a streaming data source
 Collection<Statement> data = ...
 for (Statement s : data) {
-    // as new statements are added, query results will be pushed to the BindingSetHandler
+    // as new statements are added, computed query answers will be pushed to the BindingSetHandler
     queryEngine.addStatement(s);        
 }
 
-// cancel the query subscription at any time
+// cancel the query subscription at any time;
+// no further answers will be computed/produced for the corresponding query
 sub.cancel();
 ```
 
