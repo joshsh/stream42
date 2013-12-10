@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.Var;

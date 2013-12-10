@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.etc;
 
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
@@ -15,7 +15,7 @@ import org.openrdf.model.impl.ValueFactoryBase;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-class ErrorTolerantValueFactory extends ValueFactoryBase {
+public class ErrorTolerantValueFactory extends ValueFactoryBase {
     private static final URI GOOD_URI = new URIImpl("http://example.org/substitute-for-bad-uri");
 
     private final ValueFactory base;

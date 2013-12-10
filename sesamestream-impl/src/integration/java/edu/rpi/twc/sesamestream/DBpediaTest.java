@@ -1,5 +1,7 @@
 package edu.rpi.twc.sesamestream;
 
+import edu.rpi.twc.sesamestream.etc.QueryEngineTestBase;
+import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,7 +21,7 @@ public class DBpediaTest extends QueryEngineTestBase {
         sail = new MemoryStore();
         sail.initialize();
 
-        queryEngine = new QueryEngine();
+        queryEngine = new QueryEngineImpl();
     }
 
     @After

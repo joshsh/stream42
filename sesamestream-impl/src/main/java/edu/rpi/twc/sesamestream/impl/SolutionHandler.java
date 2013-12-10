@@ -1,9 +1,9 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-interface SolutionHandler {
+public interface SolutionHandler {
     void handle(PartialSolution ps,
                 TriplePattern matched,
                 VarList newBindings);

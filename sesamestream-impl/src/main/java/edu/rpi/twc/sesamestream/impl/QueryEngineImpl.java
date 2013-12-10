@@ -1,5 +1,9 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
+import edu.rpi.twc.sesamestream.BindingSetHandler;
+import edu.rpi.twc.sesamestream.QueryEngine;
+import edu.rpi.twc.sesamestream.SesameStream;
+import edu.rpi.twc.sesamestream.Subscription;
 import net.fortytwo.linkeddata.CacheEntry;
 import net.fortytwo.linkeddata.LinkedDataCache;
 import net.fortytwo.ripple.RippleException;
@@ -10,11 +14,15 @@ import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.query.Binding;
 import org.openrdf.query.BindingSet;
+import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
+import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.impl.MapBindingSet;
+import org.openrdf.query.parser.ParsedQuery;
+import org.openrdf.query.parser.QueryParserUtil;
 import org.openrdf.sail.Sail;
 import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailException;
@@ -27,10 +35,9 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 /**
- * A SesameStream continuous SPARQL query engine.
+ * Concrete implementation of a SesameStream continuous SPARQL query engine.
  * The engine receives SPARQL queries in advance of the data they query against, and answers them in a forward-chaining fashion.
  * Optionally (depending on {@link edu.rpi.twc.sesamestream.SesameStream} settings), performance data is generated in the process.
- * <p/>
  * <p/>
  * Current assumptions:
  * 1) only simple, conjunctive SELECT queries, without filters, unions, optionals, etc.
@@ -46,8 +53,8 @@ import java.util.logging.Logger;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class QueryEngine {
-    private static final Logger LOGGER = Logger.getLogger(QueryEngine.class.getName());
+public class QueryEngineImpl implements QueryEngine {
+    private static final Logger LOGGER = Logger.getLogger(QueryEngineImpl.class.getName());
 
     //private final Map<TriplePattern, Collection<PartialSolution>> oldIndex;
     private final TripleIndex index;
@@ -94,7 +101,7 @@ public class QueryEngine {
     /**
      * Creates a new query engine with an empty index
      */
-    public QueryEngine() {
+    public QueryEngineImpl() {
         index = new TripleIndex();
         uniquePatterns = new HashMap<TriplePattern, TriplePattern>();
         deduplicator = new TriplePatternDeduplicator();
@@ -134,9 +141,6 @@ public class QueryEngine {
         return index;
     }
 
-    /**
-     * Removes all triple patterns along with their associated partial solutions, queries, and subscriptions
-     */
     public void clear() {
         index.clear();
         uniquePatterns.clear();
@@ -153,16 +157,35 @@ public class QueryEngine {
         logHeader();
     }
 
+    public Subscription addQuery(final String q,
+                                 final BindingSetHandler h) throws IncompatibleQueryException, InvalidQueryException {
+        // TODO
+        String baseURI = "http://example.org/baseURI";
+
+        ParsedQuery query;
+        try {
+            query = QueryParserUtil.parseQuery(
+                    QueryLanguage.SPARQL,
+                    q,
+                    baseURI);
+        } catch (MalformedQueryException e) {
+            throw new InvalidQueryException(e);
+        }
+
+        return addQuery(query.getTupleExpr(), h);
+    }
+
     /**
-     * Adds a new query (subscription) to this query engine
+     * Adds a new query subscription to this query engine
      *
      * @param t the query to add
-     * @param h a handler for eventual results of the query
-     * @throws Query.IncompatibleQueryException
+     * @param h a handler for future query answers
+     * @return a subscription for computation of future query answers
+     * @throws IncompatibleQueryException
      *          if the syntax of the query is not supported by this engine
      */
     public Subscription addQuery(final TupleExpr t,
-                                 final BindingSetHandler h) throws Query.IncompatibleQueryException {
+                                 final BindingSetHandler h) throws IncompatibleQueryException {
         mutexUp();
 
         increment(countQueries, true);
@@ -184,15 +207,6 @@ public class QueryEngine {
         return s;
     }
 
-    /**
-     * Adds a new statement to this query engine.
-     * Depending on the queries registered with this engine,
-     * the statement will either be discarded as irrelevant to the queries,
-     * trigger the creation of partial solutions which are stored in anticipation of further statements,
-     * or trigger the production query results
-     *
-     * @param s the statement to add
-     */
     public void addStatement(final Statement s) {
         if (mutex) {
             //System.out.println("queueing statement: " + s);
@@ -566,7 +580,7 @@ public class QueryEngine {
         increment(countSolutions, true);
         if (SesameStream.getDoPerformanceMetrics()) {
             System.out.println("SOLUTION\t" + System.currentTimeMillis() + "\t"
-                    + QueryEngine.toString(solution));
+                    + QueryEngineImpl.toString(solution));
         }
 
         handler.handle(solution);

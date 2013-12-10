@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
 import java.util.Collection;
 
@@ -7,7 +7,7 @@ import java.util.Collection;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-class LList<T> {
+public class LList<T> {
     public static LList NIL = new LList();
 
     private final T value;

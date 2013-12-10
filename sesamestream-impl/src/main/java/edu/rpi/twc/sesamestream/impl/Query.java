@@ -1,5 +1,6 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
+import edu.rpi.twc.sesamestream.QueryEngine;
 import org.openrdf.query.Binding;
 import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Distinct;
@@ -59,7 +60,7 @@ public class Query {
     private final QueryForm queryForm;
 
     public Query(final TupleExpr expr,
-                 final QueryEngine.TriplePatternDeduplicator deduplicator) throws IncompatibleQueryException {
+                 final QueryEngineImpl.TriplePatternDeduplicator deduplicator) throws QueryEngine.IncompatibleQueryException {
         bindingNames = new HashSet<String>();
 
         graphPattern = LList.NIL;
@@ -68,7 +69,7 @@ public class Query {
 
         List<QueryModelNode> l = visit(expr);
         if (l.size() != 1) {
-            throw new IncompatibleQueryException("multiple root nodes");
+            throw new QueryEngine.IncompatibleQueryException("multiple root nodes");
         }
         QueryModelNode root = l.iterator().next();
 
@@ -80,7 +81,7 @@ public class Query {
         if (QueryForm.SELECT == queryForm) {
             findPatternsInRoot(root, patterns);
         } else {
-            throw new IncompatibleQueryException(queryForm.name() + " query form is currently not supported");
+            throw new QueryEngine.IncompatibleQueryException(queryForm.name() + " query form is currently not supported");
         }
 
         for (StatementPattern pat : patterns) {
@@ -103,7 +104,7 @@ public class Query {
         return constants;
     }
 
-    private static QueryForm findQueryType(final QueryModelNode root) throws IncompatibleQueryException {
+    private static QueryForm findQueryType(final QueryModelNode root) throws QueryEngine.IncompatibleQueryException {
         if (root instanceof Slice) {
             // note: ASK queries also have Slice as root in Sesame, but we treat them as SELECT queries
             return QueryForm.SELECT;
@@ -117,7 +118,7 @@ public class Query {
         } else if (root instanceof DescribeOperator) {
             return QueryForm.DESCRIBE;
         } else {
-            throw new IncompatibleQueryException("could not infer type of query from root node: " + root);
+            throw new QueryEngine.IncompatibleQueryException("could not infer type of query from root node: " + root);
         }
     }
 
@@ -159,7 +160,7 @@ public class Query {
     }
 
     private void findPatternsInRoot(final QueryModelNode root,
-                                    final Collection<StatementPattern> patterns) throws IncompatibleQueryException {
+                                    final Collection<StatementPattern> patterns) throws QueryEngine.IncompatibleQueryException {
         if (root instanceof Projection) {
             findPatterns((Projection) root, patterns);
         } else if (root instanceof Join) {
@@ -171,7 +172,7 @@ public class Query {
 
             List<QueryModelNode> l = visitChildren(root);
             if (1 != l.size()) {
-                throw new IncompatibleQueryException("exactly one node expected beneath DISTINCT");
+                throw new QueryEngine.IncompatibleQueryException("exactly one node expected beneath DISTINCT");
             }
 
             findPatternsInRoot(l.get(0), patterns);
@@ -180,7 +181,7 @@ public class Query {
 
             List<QueryModelNode> l = visitChildren(root);
             if (1 != l.size()) {
-                throw new IncompatibleQueryException("exactly one node expected beneath DISTINCT");
+                throw new QueryEngine.IncompatibleQueryException("exactly one node expected beneath DISTINCT");
             }
 
             findPatternsInRoot(l.get(0), patterns);
@@ -195,12 +196,12 @@ public class Query {
 
             List<QueryModelNode> l = visitChildren(root);
             if (1 != l.size()) {
-                throw new IncompatibleQueryException("exactly one node expected beneath Slice");
+                throw new QueryEngine.IncompatibleQueryException("exactly one node expected beneath Slice");
             }
 
             findPatternsInRoot(l.get(0), patterns);
         } else {
-            throw new IncompatibleQueryException("expected Projection or Distinct at root node of query; found " + root);
+            throw new QueryEngine.IncompatibleQueryException("expected Projection or Distinct at root node of query; found " + root);
         }
     }
 
@@ -210,20 +211,20 @@ public class Query {
     }
 
     private void findPatterns(final Join j,
-                              final Collection<StatementPattern> patterns) throws IncompatibleQueryException {
+                              final Collection<StatementPattern> patterns) throws QueryEngine.IncompatibleQueryException {
         for (QueryModelNode n : visitChildren(j)) {
             if (n instanceof StatementPattern) {
                 findPatterns((StatementPattern) n, patterns);
             } else if (n instanceof Join) {
                 findPatterns((Join) n, patterns);
             } else {
-                throw new IncompatibleQueryException("unexpected node: " + n);
+                throw new QueryEngine.IncompatibleQueryException("unexpected node: " + n);
             }
         }
     }
 
     private void findPatterns(final Filter f,
-                              final Collection<StatementPattern> patterns) throws IncompatibleQueryException {
+                              final Collection<StatementPattern> patterns) throws QueryEngine.IncompatibleQueryException {
         if (null == filters) {
             filters = new LinkedList<Filter>();
         }
@@ -231,12 +232,12 @@ public class Query {
 
         List<QueryModelNode> filterChildren = visitChildren(f);
         if (2 != filterChildren.size()) {
-            throw new IncompatibleQueryException("expected exactly two nodes beneath filter");
+            throw new QueryEngine.IncompatibleQueryException("expected exactly two nodes beneath filter");
         }
 
         QueryModelNode valueExpr = filterChildren.get(0);
         if (!(valueExpr instanceof ValueExpr)) {
-            throw new IncompatibleQueryException("expected value expression as first child of filter; found " + valueExpr);
+            throw new QueryEngine.IncompatibleQueryException("expected value expression as first child of filter; found " + valueExpr);
         }
 
         checkFilterFunctionSupported((ValueExpr) valueExpr);
@@ -247,33 +248,33 @@ public class Query {
         } else if (filterChild instanceof StatementPattern) {
             findPatterns((StatementPattern) filterChild, patterns);
         } else {
-            throw new IncompatibleQueryException("expected join or statement pattern beneath filter; found " + filterChild);
+            throw new QueryEngine.IncompatibleQueryException("expected join or statement pattern beneath filter; found " + filterChild);
         }
     }
 
-    private void checkFilterFunctionSupported(final ValueExpr expr) throws IncompatibleQueryException {
+    private void checkFilterFunctionSupported(final ValueExpr expr) throws QueryEngine.IncompatibleQueryException {
         if (expr instanceof Not) {
             List<QueryModelNode> children = visitChildren(expr);
             if (1 != children.size()) {
-                throw new IncompatibleQueryException("expected exactly one node beneath NOT");
+                throw new QueryEngine.IncompatibleQueryException("expected exactly one node beneath NOT");
             }
 
             QueryModelNode valueExpr = children.get(0);
             if (!(valueExpr instanceof ValueExpr)) {
-                throw new IncompatibleQueryException("expected value expression as first child of NOT; found " + valueExpr);
+                throw new QueryEngine.IncompatibleQueryException("expected value expression as first child of NOT; found " + valueExpr);
             }
 
             checkFilterFunctionSupported((ValueExpr) valueExpr);
         } else {
             // EXISTS is specifically not (yet) supported; all other filter functions are assumed to be supported
             if (expr instanceof Exists) {
-                throw new IncompatibleQueryException("EXISTS and NOT EXISTS are not supported");
+                throw new QueryEngine.IncompatibleQueryException("EXISTS and NOT EXISTS are not supported");
             }
         }
     }
 
     private void findPatterns(final Projection p,
-                              final Collection<StatementPattern> patterns) throws IncompatibleQueryException {
+                              final Collection<StatementPattern> patterns) throws QueryEngine.IncompatibleQueryException {
         List<QueryModelNode> l = visitChildren(p);
 
         Extension ext = null;
@@ -299,7 +300,7 @@ public class Query {
             if (n instanceof Join) {
                 Join j = (Join) n;
                 if (TupleExprs.containsProjection(j)) {
-                    throw new IncompatibleQueryException("join contains projection");
+                    throw new QueryEngine.IncompatibleQueryException("join contains projection");
                 }
 
                 findPatterns(j, patterns);
@@ -319,7 +320,7 @@ public class Query {
                     String target = extendedBindingNames.get(name);
 
                     if (null == target) {
-                        throw new IncompatibleQueryException("ExtensionElem does not correspond to a projection variable");
+                        throw new QueryEngine.IncompatibleQueryException("ExtensionElem does not correspond to a projection variable");
                     }
 
                     ValueConstant vc = (ValueConstant) ve;
@@ -330,12 +331,12 @@ public class Query {
                 } else if (ve instanceof Var) {
                     // do nothing; the source-->target mapping is already in the extended binding names
                 } else {
-                    throw new IncompatibleQueryException("expected ValueConstant or Var within ExtensionElem; found " + ve);
+                    throw new QueryEngine.IncompatibleQueryException("expected ValueConstant or Var within ExtensionElem; found " + ve);
                 }
             } else if (n instanceof Order) {
-                throw new IncompatibleQueryException("the ORDER BY modifier is not supported by SesameStream");
+                throw new QueryEngine.IncompatibleQueryException("the ORDER BY modifier is not supported by SesameStream");
             } else {
-                throw new IncompatibleQueryException("unexpected type: " + n.getClass());
+                throw new QueryEngine.IncompatibleQueryException("unexpected type: " + n.getClass());
             }
         }
     }
@@ -378,17 +379,4 @@ public class Query {
         return visited;
     }
 
-    /**
-     * An exception thrown when a valid SPARQL query is incompatible with SesameStream.
-     * Only a subset of the SPARQL standard is supported.
-     */
-    public static class IncompatibleQueryException extends Exception {
-        public IncompatibleQueryException() {
-            super();
-        }
-
-        public IncompatibleQueryException(final String message) {
-            super(message);
-        }
-    }
 }

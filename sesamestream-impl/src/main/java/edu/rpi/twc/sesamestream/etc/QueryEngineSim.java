@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.etc;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 /**
- * Placeholder for a {@link edu.rpi.twc.sesamestream.QueryEngine} proxy, to be used for time complexity analysis
+ * Placeholder for a {@link edu.rpi.twc.sesamestream.impl.QueryEngineImpl} proxy, to be used for time complexity analysis
  * as opposed to computation of query results
  *
  * @author Joshua Shinavier (http://fortytwo.net)

@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
 import org.openrdf.query.algebra.Add;
 import org.openrdf.query.algebra.And;
@@ -85,7 +85,7 @@ import java.util.List;
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-class SimpleQueryModelVisitor implements QueryModelVisitor {
+public class SimpleQueryModelVisitor implements QueryModelVisitor {
     private final List<QueryModelNode> visited;
 
     public SimpleQueryModelVisitor(List<QueryModelNode> visited) {

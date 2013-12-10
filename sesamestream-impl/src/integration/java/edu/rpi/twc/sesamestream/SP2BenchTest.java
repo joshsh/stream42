@@ -1,5 +1,7 @@
 package edu.rpi.twc.sesamestream;
 
+import edu.rpi.twc.sesamestream.etc.QueryEngineTestBase;
+import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,7 +31,7 @@ public class SP2BenchTest extends QueryEngineTestBase {
         sail = new MemoryStore();
         sail.initialize();
 
-        queryEngine = new QueryEngine();
+        queryEngine = new QueryEngineImpl();
     }
 
     @After
@@ -47,7 +49,7 @@ public class SP2BenchTest extends QueryEngineTestBase {
     }
 
     // query #2 contains an ORDER BY modifier, which is not compatible with SesameStream's infinite stream model
-    @Test(expected = Query.IncompatibleQueryException.class)
+    @Test(expected = QueryEngine.IncompatibleQueryException.class)
     public void testQuery2() throws Exception {
         continuousQueryAnswers(data, loadQuery("sp2bench/q2.rq"), false);
     }

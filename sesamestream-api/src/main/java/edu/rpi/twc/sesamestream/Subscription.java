@@ -1,6 +1,8 @@
 package edu.rpi.twc.sesamestream;
 
 /**
+ * An object which manages a subscription to a continuous query
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public interface Subscription {

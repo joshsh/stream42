@@ -1,5 +1,7 @@
 package edu.rpi.twc.sesamestream;
 
+import edu.rpi.twc.sesamestream.etc.QueryEngineTestBase;
+import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,7 +33,7 @@ public class QueryEngineTest extends QueryEngineTestBase {
         sail = new MemoryStore();
         sail.initialize();
 
-        queryEngine = new QueryEngine();
+        queryEngine = new QueryEngineImpl();
     }
 
     @After
@@ -254,7 +256,7 @@ public class QueryEngineTest extends QueryEngineTestBase {
         }
     }
 
-    @Test(expected = Query.IncompatibleQueryException.class)
+    @Test(expected = QueryEngine.IncompatibleQueryException.class)
     public void testDescribe() throws Exception {
         continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("describe.rq"), false);
@@ -291,7 +293,7 @@ public class QueryEngineTest extends QueryEngineTestBase {
     }
     */
 
-    @Test(expected = Query.IncompatibleQueryException.class)
+    @Test(expected = QueryEngine.IncompatibleQueryException.class)
     public void testNotExistsUnsupported() throws Exception {
         continuousQueryAnswers(loadData("example.nq"), loadQuery("not-exists.rq"), false);
     }

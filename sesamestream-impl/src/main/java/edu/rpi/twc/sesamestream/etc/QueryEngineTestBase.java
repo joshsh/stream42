@@ -1,5 +1,10 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.etc;
 
+import edu.rpi.twc.sesamestream.BindingSetHandler;
+import edu.rpi.twc.sesamestream.impl.PartialSolution;
+import edu.rpi.twc.sesamestream.SesameStream;
+import edu.rpi.twc.sesamestream.impl.Visitor;
+import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import info.aduna.io.IOUtil;
 import info.aduna.iteration.CloseableIteration;
 import org.openrdf.model.Statement;
@@ -32,12 +37,12 @@ import java.util.Set;
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-class QueryEngineTestBase {
+public class QueryEngineTestBase {
     protected static final String BASE_URI = "http://example.org/base/";
 
     protected QueryParser queryParser = new SPARQLParser();
     protected Sail sail;
-    protected QueryEngine queryEngine;
+    protected QueryEngineImpl queryEngine;
     protected ValueFactory vf = new ValueFactoryImpl();
 
     protected String ex = "http://example.org/";
@@ -202,7 +207,7 @@ class QueryEngineTestBase {
         return count;
     }
 
-    protected class NullBindingSetHandler implements BindingSetHandler {
+    public class NullBindingSetHandler implements BindingSetHandler {
         public void handle(final BindingSet result) {
         }
     }

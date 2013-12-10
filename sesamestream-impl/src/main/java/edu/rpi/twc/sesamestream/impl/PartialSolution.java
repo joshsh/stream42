@@ -1,8 +1,8 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
 /**
  * An intermediate result in the answering of a continuous query.
- * It contains a {@link SubscriptionImpl}, zero or more already-completed bindings of variables to values,
+ * It contains a {@link edu.rpi.twc.sesamestream.impl.SubscriptionImpl}, zero or more already-completed bindings of variables to values,
  * and a basic graph pattern (BGP) of one or more still-to-be-matched triple patterns.
  * Logically, a SesameStream query engine's index is a set of <code>PartialSolution</code>s.
  *

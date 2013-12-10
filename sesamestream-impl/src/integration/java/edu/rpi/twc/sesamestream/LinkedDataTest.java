@@ -1,5 +1,7 @@
 package edu.rpi.twc.sesamestream;
 
+import edu.rpi.twc.sesamestream.etc.QueryEngineTestBase;
+import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import net.fortytwo.flow.NullSink;
 import net.fortytwo.flow.Sink;
 import net.fortytwo.flow.rdf.RDFSink;
@@ -23,7 +25,7 @@ public class LinkedDataTest extends QueryEngineTestBase {
         sail = new MemoryStore();
         sail.initialize();
 
-        queryEngine = new QueryEngine();
+        queryEngine = new QueryEngineImpl();
     }
 
     @After

@@ -1,5 +1,10 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.etc;
 
+import edu.rpi.twc.sesamestream.BindingSetHandler;
+import edu.rpi.twc.sesamestream.QueryEngine;
+import edu.rpi.twc.sesamestream.etc.ErrorTolerantValueFactory;
+import edu.rpi.twc.sesamestream.etc.QueryEngineAdder;
+import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import info.aduna.io.IOUtil;
 import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.query.BindingSet;
@@ -49,8 +54,8 @@ public class TestRunner {
     }
 
     private static void doRun(final List<String> queryFiles,
-                              final List<String> dataFiles) throws IOException, MalformedQueryException, Query.IncompatibleQueryException, RDFHandlerException {
-        QueryEngine engine = new QueryEngine();
+                              final List<String> dataFiles) throws IOException, MalformedQueryException, QueryEngine.IncompatibleQueryException, RDFHandlerException {
+        QueryEngineImpl engine = new QueryEngineImpl();
         QueryParser queryParser = new SPARQLParser();
         String baseUri = "http://example.org/base-uri/";
 

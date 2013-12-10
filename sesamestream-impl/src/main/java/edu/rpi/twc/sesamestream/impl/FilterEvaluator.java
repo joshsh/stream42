@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
 import info.aduna.iteration.CloseableIteration;
 import net.fortytwo.sesametools.EmptyCloseableIteration;
@@ -17,7 +17,7 @@ import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-class FilterEvaluator {
+public class FilterEvaluator {
     private final ValueFactory valueFactory;
     private final EvaluationStrategy eval;
 

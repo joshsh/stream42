@@ -1,18 +1,19 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.etc;
 
+import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
 /**
- * An <code>RDFHandler</code> which adds handled <code>Statements</code> to a designated {@link QueryEngine}
+ * An <code>RDFHandler</code> which adds handled <code>Statements</code> to a designated {@link edu.rpi.twc.sesamestream.impl.QueryEngineImpl}
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-class QueryEngineAdder implements RDFHandler {
-    private final QueryEngine queryEngine;
+public class QueryEngineAdder implements RDFHandler {
+    private final QueryEngineImpl queryEngine;
 
-    public QueryEngineAdder(final QueryEngine queryEngine) {
+    public QueryEngineAdder(final QueryEngineImpl queryEngine) {
         this.queryEngine = queryEngine;
     }
 

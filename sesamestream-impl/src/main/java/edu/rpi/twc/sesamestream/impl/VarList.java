@@ -1,5 +1,6 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
+import edu.rpi.twc.sesamestream.SesameStream;
 import org.openrdf.model.Value;
 import org.openrdf.query.algebra.Var;
 

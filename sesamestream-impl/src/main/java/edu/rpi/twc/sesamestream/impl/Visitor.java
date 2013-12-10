@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
 /**
  * A generic visitor for objects in a collection.  Each object is to be visited once.

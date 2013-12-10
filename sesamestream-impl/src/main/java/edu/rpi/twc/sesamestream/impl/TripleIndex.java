@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
 
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A recursive data structure which associates {@link TriplePattern}s with SPARQL {@link PartialSolution}s and computes
+ * A recursive data structure which associates {@link TriplePattern}s with SPARQL {@link edu.rpi.twc.sesamestream.impl.PartialSolution}s and computes
  * new solutions in response to incoming RDF statements.
  *
  * @author Joshua Shinavier (http://fortytwo.net)

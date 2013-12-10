@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.etc;
 
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandler;
@@ -11,7 +11,7 @@ import java.util.Collection;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-class StatementCollector implements RDFHandler {
+public class StatementCollector implements RDFHandler {
     private Collection<Statement> coll;
 
     public StatementCollector(final Collection<Statement> coll) {

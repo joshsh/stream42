@@ -1,4 +1,7 @@
-package edu.rpi.twc.sesamestream;
+package edu.rpi.twc.sesamestream.impl;
+
+import edu.rpi.twc.sesamestream.BindingSetHandler;
+import edu.rpi.twc.sesamestream.Subscription;
 
 /**
  * An object which associates a SPARQL query with a handler for the query's results
@@ -28,7 +31,7 @@ public class SubscriptionImpl implements Subscription {
     }
 
     /**
-     * @return the SPARQL query which has been registered in the {@link QueryEngine}
+     * @return the SPARQL query which has been registered in the {@link QueryEngineImpl}
      */
     public Query getQuery() {
         return query;

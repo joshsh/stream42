@@ -1,8 +1,6 @@
 package edu.rpi.twc.sesamestream;
 
-import edu.rpi.twc.sesamestream.BindingSetHandler;
-import edu.rpi.twc.sesamestream.QueryEngine;
-import edu.rpi.twc.sesamestream.SesameStream;
+import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import info.aduna.io.IOUtil;
 import org.junit.Test;
 import org.openrdf.query.BindingSet;
@@ -28,7 +26,7 @@ public class SesameStreamTest {
 
     @Test
     public void testParseLubmQueries() throws Exception {
-        QueryEngine engine = new QueryEngine();
+        QueryEngineImpl engine = new QueryEngineImpl();
 
         BindingSetHandler bsh = new BindingSetHandler() {
             public void handle(BindingSet result) {
