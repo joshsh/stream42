@@ -27,6 +27,7 @@ import org.openrdf.sail.Sail;
 import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailException;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -226,6 +227,18 @@ public class QueryEngineImpl implements QueryEngine {
             logEntry();
 
             mutexDown();
+        }
+    }
+
+    public void addStatements(final Statement... statements) {
+        for (Statement s : statements) {
+            addStatement(s);
+        }
+    }
+
+    public void addStatements(final Collection<Statement> statements) {
+        for (Statement s : statements) {
+            addStatement(s);
         }
     }
 

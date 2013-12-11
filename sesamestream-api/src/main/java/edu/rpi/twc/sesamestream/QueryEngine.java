@@ -2,6 +2,8 @@ package edu.rpi.twc.sesamestream;
 
 import org.openrdf.model.Statement;
 
+import java.util.Collection;
+
 /**
  * A continuous SPARQL query engine with a publish/subscribe API
  *
@@ -19,28 +21,49 @@ public interface QueryEngine {
      * @param q the query to add
      * @param h a handler for future query answers
      * @return a subscription for computation of future query answers
-     * @throws IncompatibleQueryException
-     *          if the syntax of the query is not supported by this engine
+     * @throws IncompatibleQueryException if the syntax of the query is not supported by this engine
      */
-    public Subscription addQuery(final String q,
-                                 final BindingSetHandler h) throws IncompatibleQueryException, InvalidQueryException;
+    Subscription addQuery(String q,
+                          BindingSetHandler h) throws IncompatibleQueryException, InvalidQueryException;
 
     /**
      * Adds a new statement to this query engine.
      * Depending on the queries registered with this engine,
      * the statement will either be discarded as irrelevant to the queries,
      * trigger the creation of partial solutions which are stored in anticipation of further statements,
-     * or trigger the production query results
+     * or trigger the production query answers.
      *
      * @param s the statement to add
      */
-    public void addStatement(final Statement s);
+    void addStatement(Statement s);
+
+    /**
+     * Adds new statements to this query engine.
+     * Depending on the queries registered with this engine,
+     * the statements will either be discarded as irrelevant to the queries,
+     * trigger the creation of partial solutions which are stored in anticipation of further statements,
+     * or trigger the production query answers.
+     *
+     * @param statements the statements to add.  Statements are added in array order
+     */
+    void addStatements(Statement... statements);
+
+    /**
+     * Adds new statements to this query engine.
+     * Depending on the queries registered with this engine,
+     * the statements will either be discarded as irrelevant to the queries,
+     * trigger the creation of partial solutions which are stored in anticipation of further statements,
+     * or trigger the production query answers.
+     *
+     * @param statements the statements to add.  Statements are added in the iterator order of the collection
+     */
+    void addStatements(Collection<Statement> statements);
 
     /**
      * An exception thrown when a query is not valid SPARQL
      */
     class InvalidQueryException extends Exception {
-        public InvalidQueryException(final Throwable cause) {
+        public InvalidQueryException(Throwable cause) {
             super(cause);
         }
     }
@@ -50,7 +73,7 @@ public interface QueryEngine {
      * Only a subset of the SPARQL standard is supported.
      */
     class IncompatibleQueryException extends Exception {
-        public IncompatibleQueryException(final String message) {
+        public IncompatibleQueryException(String message) {
             super(message);
         }
     }
