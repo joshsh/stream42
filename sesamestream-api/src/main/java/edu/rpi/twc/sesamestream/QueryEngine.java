@@ -2,6 +2,7 @@ package edu.rpi.twc.sesamestream;
 
 import org.openrdf.model.Statement;
 
+import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -21,10 +22,12 @@ public interface QueryEngine {
      * @param q the query to add
      * @param h a handler for future query answers
      * @return a subscription for computation of future query answers
-     * @throws IncompatibleQueryException if the syntax of the query is not supported by this engine
+     * @throws InvalidQueryException if the query is not valid SPARQL
+     * @throws IncompatibleQueryException if the query is valid SPARQL, but is not supported by this query engine
+     * @throws IOException if there is a problem communicating with this query engine (for example, if there are network operations involved)
      */
     Subscription addQuery(String q,
-                          BindingSetHandler h) throws IncompatibleQueryException, InvalidQueryException;
+                          BindingSetHandler h) throws IOException, IncompatibleQueryException, InvalidQueryException;
 
     /**
      * Adds a new statement to this query engine.
@@ -34,8 +37,9 @@ public interface QueryEngine {
      * or trigger the production query answers.
      *
      * @param s the statement to add
+     * @throws IOException if there is a problem communicating with this query engine (for example, if there are network operations involved)
      */
-    void addStatement(Statement s);
+    void addStatement(Statement s) throws IOException;
 
     /**
      * Adds new statements to this query engine.
@@ -45,8 +49,9 @@ public interface QueryEngine {
      * or trigger the production query answers.
      *
      * @param statements the statements to add.  Statements are added in array order
+     * @throws IOException if there is a problem communicating with this query engine (for example, if there are network operations involved)
      */
-    void addStatements(Statement... statements);
+    void addStatements(Statement... statements) throws IOException;
 
     /**
      * Adds new statements to this query engine.
@@ -56,8 +61,9 @@ public interface QueryEngine {
      * or trigger the production query answers.
      *
      * @param statements the statements to add.  Statements are added in the iterator order of the collection
+     * @throws IOException if there is a problem communicating with this query engine (for example, if there are network operations involved)
      */
-    void addStatements(Collection<Statement> statements);
+    void addStatements(Collection<Statement> statements) throws IOException;
 
     /**
      * An exception thrown when a query is not valid SPARQL
@@ -69,8 +75,7 @@ public interface QueryEngine {
     }
 
     /**
-     * An exception thrown when a valid SPARQL query is incompatible with SesameStream.
-     * Only a subset of the SPARQL standard is supported.
+     * An exception thrown when a valid SPARQL query is incompatible with a QueryEngine implementation
      */
     class IncompatibleQueryException extends Exception {
         public IncompatibleQueryException(String message) {

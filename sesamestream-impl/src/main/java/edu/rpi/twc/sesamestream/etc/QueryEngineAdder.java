@@ -5,6 +5,8 @@ import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
+import java.io.IOException;
+
 /**
  * An <code>RDFHandler</code> which adds handled <code>Statements</code> to a designated {@link edu.rpi.twc.sesamestream.QueryEngine}
  *
@@ -27,7 +29,11 @@ public class QueryEngineAdder implements RDFHandler {
     }
 
     public void handleStatement(Statement s) throws RDFHandlerException {
-        queryEngine.addStatement(s);
+        try {
+            queryEngine.addStatement(s);
+        } catch (IOException e) {
+            throw new RDFHandlerException(e);
+        }
     }
 
     public void handleComment(String s) throws RDFHandlerException {
