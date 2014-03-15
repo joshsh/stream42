@@ -32,8 +32,29 @@ for (Statement s : data) {
 sub.cancel();
 ```
 
+For projects which use Maven, SesameStream snapshots and release packages can be imported by adding configuration like the following to the project's POM:
+
+```xml
+    <dependency>
+        <groupId>edu.rpi.twc.sesamestream</groupId>
+        <artifactId>sesamestream-impl</artifactId>
+        <version>1.0</version>
+    </dependency>
+```
+
+or if you will implement the API (e.g. for a SesameStream proxy),
+
+```xml
+    <dependency>
+        <groupId>edu.rpi.twc.sesamestream</groupId>
+        <artifactId>sesamestream-api</artifactId>
+        <version>1.0</version>
+    </dependency>
+```
+
+The latest Maven packages can be browsed [here](http://search.maven.org/#search%7Cga%7C1%7Csesamestream).
 See also:
-* [SesameStream API](http://fortytwo.net/projects/sesamestream/api/latest/)
+* [SesameStream API](http://fortytwo.net/projects/sesamestream/api/latest/index.html)
 
 Send questions or comments to:
 
