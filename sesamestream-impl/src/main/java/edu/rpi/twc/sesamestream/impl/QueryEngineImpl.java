@@ -39,7 +39,7 @@ import java.util.logging.Logger;
  * Concrete implementation of a SesameStream continuous SPARQL query engine.
  * The engine receives SPARQL queries in advance of the data they query against, and answers them in a forward-chaining fashion.
  * Optionally (depending on {@link edu.rpi.twc.sesamestream.SesameStream} settings), performance data is generated in the process.
- * <p/>
+ *
  * Current assumptions:
  * 1) only simple, conjunctive SELECT queries, without filters, unions, optionals, etc.
  * 2) no GRAPH constraints

@@ -31,10 +31,49 @@
             <artifactId>sesame-queryparser-sparql</artifactId>
             <version>${sesame.version}</version>
         </dependency>
+        <!-- temporary; necessary because linked-data-sail depends on multiple versions of this module -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.3.1</version>
+        </dependency>
         <dependency>
             <groupId>net.fortytwo</groupId>
             <artifactId>linked-data-sail</artifactId>
             <version>${ripple.version}</version>
+            <exclusions>
+                <!-- temporary conflict; as of 1.2-SNAPSHOT, Ripple does not have its own slf4j dependencies -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <!-- temporary conflict; as of 1.2-SNAPSHOT, Ripple enforces consistency w.r.t. Sesame dependencies -->
+                <exclusion>
+                    <groupId>org.openrdf.sesame</groupId>
+                    <artifactId>sesame-model</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openrdf.sesame</groupId>
+                    <artifactId>sesame-rio-api</artifactId>
+                </exclusion>
+                <!-- temporary; see dependency above -->
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>net.fortytwo.sesametools</groupId>
+            <artifactId>common</artifactId>
+            <version>${sesametools.version}</version>
+            <exclusions>
+                <!-- temporary conflict; as of 1.9-SNAPSHOT, SesameTools does not have its own slf4j dependencies -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.openrdf.sesame</groupId>

@@ -2,8 +2,6 @@ package edu.rpi.twc.sesamestream.etc;
 
 import edu.rpi.twc.sesamestream.BindingSetHandler;
 import edu.rpi.twc.sesamestream.QueryEngine;
-import edu.rpi.twc.sesamestream.etc.ErrorTolerantValueFactory;
-import edu.rpi.twc.sesamestream.etc.QueryEngineAdder;
 import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import info.aduna.io.IOUtil;
 import org.openrdf.model.impl.ValueFactoryImpl;
