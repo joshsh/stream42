@@ -11,7 +11,7 @@
 
     <groupId>edu.rpi.twc.sesamestream</groupId>
     <artifactId>sesamestream-all</artifactId>
-    <version>1.0</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>SesameStream</name>
     <description>Continuous queries for Sesame</description>
@@ -46,10 +46,10 @@
 
     <properties>
         <junit.version>4.5</junit.version>
-        <ripple.version>1.1</ripple.version>
+        <ripple.version>1.2-SNAPSHOT</ripple.version>
         <sesame.version>2.7.10</sesame.version>
-        <sesamestream.version>1.0</sesamestream.version>
-        <sesametools.version>1.8</sesametools.version>
+        <sesamestream.version>1.1-SNAPSHOT</sesamestream.version>
+        <sesametools.version>1.9-SNAPSHOT</sesametools.version>
     </properties>
 
     <modules>

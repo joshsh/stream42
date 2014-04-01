@@ -5,14 +5,14 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>sesamestream-api</artifactId>
-    <version>1.0</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>SesameStream API</name>
 
     <parent>
         <groupId>edu.rpi.twc.sesamestream</groupId>
         <artifactId>sesamestream-all</artifactId>
-        <version>1.0</version>
+        <version>1.1-SNAPSHOT</version>
     </parent>
 
     <dependencies>
