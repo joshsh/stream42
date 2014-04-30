@@ -39,7 +39,7 @@ import java.util.logging.Logger;
  * Concrete implementation of a SesameStream continuous SPARQL query engine.
  * The engine receives SPARQL queries in advance of the data they query against, and answers them in a forward-chaining fashion.
  * Optionally (depending on {@link edu.rpi.twc.sesamestream.SesameStream} settings), performance data is generated in the process.
- *
+ * <p/>
  * Current assumptions:
  * 1) only simple, conjunctive SELECT queries, without filters, unions, optionals, etc.
  * 2) no GRAPH constraints
@@ -135,8 +135,8 @@ public class QueryEngineImpl implements QueryEngine {
      * Gets the index, or in-memory database, of this query engine
      *
      * @return the index, or in-memory database, of this query engine.
-     *         It should not be necessary to interact with the index directly, but it is possible to inspect the index via
-     *         print and visit methods.
+     * It should not be necessary to interact with the index directly, but it is possible to inspect the index via
+     * print and visit methods.
      */
     public TripleIndex getIndex() {
         return index;
@@ -182,8 +182,7 @@ public class QueryEngineImpl implements QueryEngine {
      * @param t the query to add
      * @param h a handler for future query answers
      * @return a subscription for computation of future query answers
-     * @throws IncompatibleQueryException
-     *          if the syntax of the query is not supported by this engine
+     * @throws IncompatibleQueryException if the syntax of the query is not supported by this engine
      */
     public Subscription addQuery(final TupleExpr t,
                                  final BindingSetHandler h) throws IncompatibleQueryException {
@@ -303,17 +302,29 @@ public class QueryEngineImpl implements QueryEngine {
             Value o = p.getObject().getValue();
 
             try {
-                if (null != s && s instanceof URI) {
-                    System.out.println("looking up subject: " + s);
-                    CacheEntry.Status status = linkedDataCache.retrieveUri((URI) s, linkedDataCacheConnection);
-                    System.out.println("\t" + status);
-                }
+                // TODO: pipe the retrieved statements into the query engine
 
-                if (null != o && o instanceof URI) {
-                    System.out.println("looking up object: " + o);
-                    linkedDataCache.retrieveUri((URI) o, linkedDataCacheConnection);
+                linkedDataCacheConnection.begin();
+                try {
+                    if (null != s && s instanceof URI) {
+                        //System.out.println("looking up subject: " + s);
+                        CacheEntry.Status status = linkedDataCache.retrieveUri((URI) s, linkedDataCacheConnection);
+                        //System.out.println("\t" + status);
+                    }
+
+                    if (null != o && o instanceof URI) {
+                        //System.out.println("looking up object: " + o);
+                        CacheEntry.Status status = linkedDataCache.retrieveUri((URI) o, linkedDataCacheConnection);
+                        //System.out.println("\t" + status);
+                    }
+                    linkedDataCacheConnection.commit();
+                } finally {
+                    linkedDataCacheConnection.rollback();
                 }
             } catch (RippleException e) {
+                LOGGER.severe(e.getMessage());
+                e.printStackTrace();
+            } catch (SailException e) {
                 LOGGER.severe(e.getMessage());
                 e.printStackTrace();
             }
