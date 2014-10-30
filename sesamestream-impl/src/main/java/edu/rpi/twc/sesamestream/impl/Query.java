@@ -61,7 +61,9 @@ public class Query {
     private final QueryForm queryForm;
 
     public Query(final TupleExpr expr,
-                 final QueryEngineImpl.TriplePatternDeduplicator deduplicator) throws QueryEngine.IncompatibleQueryException {
+                 final QueryEngineImpl.TriplePatternDeduplicator deduplicator)
+            throws QueryEngine.IncompatibleQueryException {
+
         bindingNames = new HashSet<String>();
 
         graphPattern = LList.NIL;
@@ -82,7 +84,8 @@ public class Query {
         if (QueryForm.SELECT == queryForm) {
             findPatternsInRoot(root, patterns);
         } else {
-            throw new QueryEngine.IncompatibleQueryException(queryForm.name() + " query form is currently not supported");
+            throw new QueryEngine.IncompatibleQueryException(queryForm.name()
+                    + " query form is currently not supported");
         }
 
         for (StatementPattern pat : patterns) {
@@ -161,7 +164,9 @@ public class Query {
     }
 
     private void findPatternsInRoot(final QueryModelNode root,
-                                    final Collection<StatementPattern> patterns) throws QueryEngine.IncompatibleQueryException {
+                                    final Collection<StatementPattern> patterns)
+            throws QueryEngine.IncompatibleQueryException {
+
         if (root instanceof Projection) {
             findPatterns((Projection) root, patterns);
         } else if (root instanceof Join) {
@@ -202,7 +207,8 @@ public class Query {
 
             findPatternsInRoot(l.get(0), patterns);
         } else {
-            throw new QueryEngine.IncompatibleQueryException("expected Projection or Distinct at root node of query; found " + root);
+            throw new QueryEngine.IncompatibleQueryException(
+                    "expected Projection or Distinct at root node of query; found " + root);
         }
     }
 
@@ -212,7 +218,9 @@ public class Query {
     }
 
     private void findPatterns(final Join j,
-                              final Collection<StatementPattern> patterns) throws QueryEngine.IncompatibleQueryException {
+                              final Collection<StatementPattern> patterns)
+            throws QueryEngine.IncompatibleQueryException {
+
         for (QueryModelNode n : visitChildren(j)) {
             if (n instanceof StatementPattern) {
                 findPatterns((StatementPattern) n, patterns);
@@ -225,7 +233,9 @@ public class Query {
     }
 
     private void findPatterns(final Filter f,
-                              final Collection<StatementPattern> patterns) throws QueryEngine.IncompatibleQueryException {
+                              final Collection<StatementPattern> patterns)
+            throws QueryEngine.IncompatibleQueryException {
+
         if (null == filters) {
             filters = new LinkedList<Filter>();
         }
@@ -238,7 +248,8 @@ public class Query {
 
         QueryModelNode valueExpr = filterChildren.get(0);
         if (!(valueExpr instanceof ValueExpr)) {
-            throw new QueryEngine.IncompatibleQueryException("expected value expression as first child of filter; found " + valueExpr);
+            throw new QueryEngine.IncompatibleQueryException(
+                    "expected value expression as first child of filter; found " + valueExpr);
         }
 
         checkFilterFunctionSupported((ValueExpr) valueExpr);
@@ -258,7 +269,8 @@ public class Query {
                 //System.out.println("te = " + te);
             }
 
-            throw new QueryEngine.IncompatibleQueryException("expected join or statement pattern beneath filter; found " + filterChild);
+            throw new QueryEngine.IncompatibleQueryException(
+                    "expected join or statement pattern beneath filter; found " + filterChild);
         }
     }
 
@@ -271,7 +283,8 @@ public class Query {
 
             QueryModelNode valueExpr = children.get(0);
             if (!(valueExpr instanceof ValueExpr)) {
-                throw new QueryEngine.IncompatibleQueryException("expected value expression as first child of NOT; found " + valueExpr);
+                throw new QueryEngine.IncompatibleQueryException(
+                        "expected value expression as first child of NOT; found " + valueExpr);
             }
 
             checkFilterFunctionSupported((ValueExpr) valueExpr);
@@ -284,7 +297,9 @@ public class Query {
     }
 
     private void findPatterns(final Projection p,
-                              final Collection<StatementPattern> patterns) throws QueryEngine.IncompatibleQueryException {
+                              final Collection<StatementPattern> patterns)
+            throws QueryEngine.IncompatibleQueryException {
+
         List<QueryModelNode> l = visitChildren(p);
 
         Extension ext = null;
@@ -330,7 +345,8 @@ public class Query {
                     String target = extendedBindingNames.get(name);
 
                     if (null == target) {
-                        throw new QueryEngine.IncompatibleQueryException("ExtensionElem does not correspond to a projection variable");
+                        throw new QueryEngine.IncompatibleQueryException(
+                                "ExtensionElem does not correspond to a projection variable");
                     }
 
                     ValueConstant vc = (ValueConstant) ve;
@@ -341,10 +357,12 @@ public class Query {
                 } else if (ve instanceof Var) {
                     // do nothing; the source-->target mapping is already in the extended binding names
                 } else {
-                    throw new QueryEngine.IncompatibleQueryException("expected ValueConstant or Var within ExtensionElem; found " + ve);
+                    throw new QueryEngine.IncompatibleQueryException(
+                            "expected ValueConstant or Var within ExtensionElem; found " + ve);
                 }
             } else if (n instanceof Order) {
-                throw new QueryEngine.IncompatibleQueryException("the ORDER BY modifier is not supported by SesameStream");
+                throw new QueryEngine.IncompatibleQueryException(
+                        "the ORDER BY modifier is not supported by SesameStream");
             } else {
                 throw new QueryEngine.IncompatibleQueryException("unexpected type: " + n.getClass());
             }

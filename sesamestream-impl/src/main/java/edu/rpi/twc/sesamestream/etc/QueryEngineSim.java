@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 /**
- * Placeholder for a {@link edu.rpi.twc.sesamestream.impl.QueryEngineImpl} proxy, to be used for time complexity analysis
- * as opposed to computation of query results
+ * Placeholder for a {@link edu.rpi.twc.sesamestream.impl.QueryEngineImpl} proxy,
+ * to be used for time complexity analysis as opposed to computation of query results
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */

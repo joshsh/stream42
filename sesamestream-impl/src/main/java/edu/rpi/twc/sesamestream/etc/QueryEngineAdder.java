@@ -8,7 +8,8 @@ import org.openrdf.rio.RDFHandlerException;
 import java.io.IOException;
 
 /**
- * An <code>RDFHandler</code> which adds handled <code>Statements</code> to a designated {@link edu.rpi.twc.sesamestream.QueryEngine}
+ * An <code>RDFHandler</code> which adds handled <code>Statements</code>
+ * to a designated {@link edu.rpi.twc.sesamestream.QueryEngine}
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */

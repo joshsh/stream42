@@ -13,7 +13,8 @@ public class SesameStream {
     private static long REDUCED_MODIFIER_CAPACITY = 1000;
 
     /**
-     * @return whether to output performance metadata as new statements are added to the query engine and solutions are found.
+     * @return whether to output performance metadata
+     * as new statements are added to the query engine and solutions are found
      * If enabled, this allows fine details query latency and throughput, memory usage,
      * and other performance variables to be studied.
      */
@@ -51,9 +52,9 @@ public class SesameStream {
     }
 
     /**
-     * @return the number of distinct solutions which each query subscription can store before it begins recycling them.
-     * For a SELECT DISTINCT query, the set of distinct solution grows without bound, but a duplicate answer will never appear
-     * in the output stream.
+     * @return the number of distinct solutions which each query subscription can store before it begins recycling them
+     * For a SELECT DISTINCT query, the set of distinct solution grows without bound,
+     * but a duplicate answer will never appear in the output stream.
      * However, for a SELECT REDUCED query, the set of distinct solutions is limited in size().
      * This is much safer with respect to memory consumption,
      * although duplicate solutions may eventually appear in the output stream.

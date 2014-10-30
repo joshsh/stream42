@@ -186,7 +186,9 @@ public class QueryEngineTestBase {
         distinct.addAll(answers);
 
         if (debug) {
-            System.out.println("" + answers.size() + " solutions (" + distinct.size() + " distinct, " + countPartialSolutions() + " partial) from " + data.size() + " statements");
+            System.out.println("" + answers.size() + " solutions ("
+                    + distinct.size() + " distinct, " + countPartialSolutions()
+                    + " partial) from " + data.size() + " statements");
         }
 
         return answers;

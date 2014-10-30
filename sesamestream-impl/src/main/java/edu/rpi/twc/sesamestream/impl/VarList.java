@@ -62,7 +62,8 @@ public class VarList {
      * Creates a new list containing the elements of two other lists.
      * The order of elements in the original lists is not preserved.
      * @param first a list of elements to add.  It will appear in the tail of the resulting list
-     * @param second another list of elements to add.  It will appear in the head of the resulting list, in reverse order
+     * @param second another list of elements to add.
+     *               It will appear in the head of the resulting list, in reverse order
      * @return the resulting list
      */
     public static VarList union(final VarList first,

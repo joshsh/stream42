@@ -23,8 +23,10 @@ public interface QueryEngine {
      * @param h a handler for future query answers
      * @return a subscription for computation of future query answers
      * @throws InvalidQueryException if the query is not valid SPARQL
-     * @throws IncompatibleQueryException if the query is valid SPARQL, but is not supported by this query engine
-     * @throws IOException if there is a problem communicating with this query engine (for example, if there are network operations involved)
+     * @throws IncompatibleQueryException if the query is valid SPARQL,
+     * but is not supported by this query engine
+     * @throws IOException if there is a problem communicating with this query engine
+     * (for example, if there are network operations involved)
      */
     Subscription addQuery(String q,
                           BindingSetHandler h) throws IOException, IncompatibleQueryException, InvalidQueryException;
@@ -37,7 +39,8 @@ public interface QueryEngine {
      * or trigger the production query answers.
      *
      * @param s the statement to add
-     * @throws IOException if there is a problem communicating with this query engine (for example, if there are network operations involved)
+     * @throws IOException if there is a problem communicating with this query engine
+     * (for example, if there are network operations involved)
      */
     void addStatement(Statement s) throws IOException;
 
@@ -49,7 +52,8 @@ public interface QueryEngine {
      * or trigger the production query answers.
      *
      * @param statements the statements to add.  Statements are added in array order
-     * @throws IOException if there is a problem communicating with this query engine (for example, if there are network operations involved)
+     * @throws IOException if there is a problem communicating with this query engine
+     * (for example, if there are network operations involved)
      */
     void addStatements(Statement... statements) throws IOException;
 
@@ -61,7 +65,8 @@ public interface QueryEngine {
      * or trigger the production query answers.
      *
      * @param statements the statements to add.  Statements are added in the iterator order of the collection
-     * @throws IOException if there is a problem communicating with this query engine (for example, if there are network operations involved)
+     * @throws IOException if there is a problem communicating with this query engine
+     * (for example, if there are network operations involved)
      */
     void addStatements(Collection<Statement> statements) throws IOException;
 

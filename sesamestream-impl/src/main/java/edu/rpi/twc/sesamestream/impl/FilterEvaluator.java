@@ -34,7 +34,9 @@ public class FilterEvaluator {
 
     // a trivial TripleSource to satisfy EvaluationStrategyImpl
     private class EmptyTripleSource implements TripleSource {
-        public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(Resource resource, URI uri, Value value, Resource... resources) throws QueryEvaluationException {
+        public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
+                Resource resource, URI uri, Value value, Resource... resources) throws QueryEvaluationException {
+
             return new EmptyCloseableIteration<Statement, QueryEvaluationException>();
         }
 
