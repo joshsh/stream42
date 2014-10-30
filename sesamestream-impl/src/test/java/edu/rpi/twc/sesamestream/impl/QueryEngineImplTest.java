@@ -32,6 +32,10 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
 
     private static final String[] LUBM_QUERIES = {"q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q11", "q12", "q13", "q14"};
 
+    private static final String[] INVALID_QUERIES = {"construct-incomplete"};
+
+    private static final String[] INCOMPATIBLE_QUERIES = {"not-equal-filters"};
+
     private ValueFactory valueFactory = new ValueFactoryImpl();
 
     @Before
@@ -63,6 +67,62 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
             try {
                 String query = IOUtil.readString(in);
                 engine.addQuery(query, bsh);
+            }   finally {
+                in.close();
+            }
+        }
+    }
+
+    @Test
+    public void testInvalidQueries() throws Exception {
+        QueryEngineImpl engine = new QueryEngineImpl();
+
+        BindingSetHandler bsh = new BindingSetHandler() {
+            public void handle(BindingSet result) {
+                // Do nothing.
+            }
+        };
+
+        for (String q : INVALID_QUERIES) {
+            String name = "invalid/" + q + ".rq";
+            InputStream in = SesameStream.class.getResourceAsStream(name);
+            boolean invalid = false;
+            try {
+                String query = IOUtil.readString(in);
+                try {
+                    engine.addQuery(query, bsh);
+                } catch (QueryEngine.InvalidQueryException e) {
+                    invalid = true;
+                }
+                assertTrue(invalid);
+            }   finally {
+                in.close();
+            }
+        }
+    }
+
+    @Test
+    public void testIncompatibleQueries() throws Exception {
+        QueryEngineImpl engine = new QueryEngineImpl();
+
+        BindingSetHandler bsh = new BindingSetHandler() {
+            public void handle(BindingSet result) {
+                // Do nothing.
+            }
+        };
+
+        for (String q : INCOMPATIBLE_QUERIES) {
+            String name = "incompatible/" + q + ".rq";
+            InputStream in = SesameStream.class.getResourceAsStream(name);
+            boolean incompatible = false;
+            try {
+                String query = IOUtil.readString(in);
+                try {
+                    engine.addQuery(query, bsh);
+                } catch (QueryEngine.IncompatibleQueryException e) {
+                    incompatible = true;
+                }
+                assertTrue(incompatible);
             }   finally {
                 in.close();
             }

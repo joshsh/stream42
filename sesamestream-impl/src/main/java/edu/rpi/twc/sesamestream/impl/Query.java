@@ -47,6 +47,7 @@ public class Query {
     private LList<TriplePattern> graphPattern;
     private List<Filter> filters;
     private Set<Binding> constants;
+    //private Map<String,>
 
     private final SolutionSequenceModifier sequenceModifier = new SolutionSequenceModifier();
 
@@ -248,6 +249,15 @@ public class Query {
         } else if (filterChild instanceof StatementPattern) {
             findPatterns((StatementPattern) filterChild, patterns);
         } else {
+            if (filterChild instanceof Filter) {
+                //System.out.println("filterChild = " + filterChild);
+                Filter childFilter = (Filter) filterChild;
+                ValueExpr ve = childFilter.getCondition();
+                System.out.println("ve = " + ve);
+                //TupleExpr te = childFilter.getArg();
+                //System.out.println("te = " + te);
+            }
+
             throw new QueryEngine.IncompatibleQueryException("expected join or statement pattern beneath filter; found " + filterChild);
         }
     }
