@@ -11,6 +11,7 @@ import java.util.Collection;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public interface QueryEngine {
+
     /**
      * Removes all triple patterns along with their associated partial solutions, queries, and subscriptions
      */

@@ -6,11 +6,12 @@ package edu.rpi.twc.sesamestream;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SesameStream {
-    private static boolean PERFORMANCE_METRICS = false;
-    private static boolean DEBUG = false;
-    private static boolean USE_COMPACT_LOG_FORMAT = true;
 
-    private static long REDUCED_MODIFIER_CAPACITY = 1000;
+    // static variables for use by SesameStream implementations (including wrappers and proxies)
+    private static boolean performanceMetrics = false;
+    private static boolean debug = false;
+    private static boolean useCompactLogFormat = true;
+    private static long reducedModifierCapacity = 1000;
 
     /**
      * @return whether to output performance metadata
@@ -19,11 +20,11 @@ public class SesameStream {
      * and other performance variables to be studied.
      */
     public static boolean getDoPerformanceMetrics() {
-        return PERFORMANCE_METRICS;
+        return performanceMetrics;
     }
 
     public static void setDoPerformanceMetrics(final boolean b) {
-        PERFORMANCE_METRICS = b;
+        performanceMetrics = b;
     }
 
     /**
@@ -31,11 +32,11 @@ public class SesameStream {
      * Normally unnecessary.
      */
     public static boolean getDoDebug() {
-        return DEBUG;
+        return debug;
     }
 
     public static void setDoDebug(final boolean b) {
-        DEBUG = b;
+        debug = b;
     }
 
     /**
@@ -44,11 +45,11 @@ public class SesameStream {
      * This makes the log much smaller.
      */
     public static boolean getDoUseCompactLogFormat() {
-        return USE_COMPACT_LOG_FORMAT;
+        return useCompactLogFormat;
     }
 
     public static void setDoUseCompactLogFormat(final boolean b) {
-        USE_COMPACT_LOG_FORMAT = b;
+        useCompactLogFormat = b;
     }
 
     /**
@@ -60,7 +61,7 @@ public class SesameStream {
      * although duplicate solutions may eventually appear in the output stream.
      */
     public static long getReducedModifierCapacity() {
-        return REDUCED_MODIFIER_CAPACITY;
+        return reducedModifierCapacity;
     }
 
     public static void setReducedModifierCapacity(final long capacity) {
@@ -68,6 +69,6 @@ public class SesameStream {
             throw new IllegalArgumentException("unreasonable REDUCED capacity value: " + capacity);
         }
 
-        REDUCED_MODIFIER_CAPACITY = capacity;
+        reducedModifierCapacity = capacity;
     }
 }

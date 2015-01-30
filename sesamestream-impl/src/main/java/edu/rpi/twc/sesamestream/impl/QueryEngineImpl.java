@@ -29,6 +29,7 @@ import org.openrdf.sail.SailException;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -89,10 +90,16 @@ public class QueryEngineImpl implements QueryEngine {
 
     private long timeCurrentOperationBegan;
 
+    public enum Quantity {
+        Queries, Statements, TriplePatterns, PartialSolutions, Solutions,
+        IndexingOperations, BindingOperations, ReplacementOperations}
+
+    private final Map<Quantity, Counter> counters;
+
     private final Counter
             countQueries = new Counter(),
-            countTriplePatterns = new Counter(),
             countStatements = new Counter(),
+            countTriplePatterns = new Counter(),
             countPartialSolutions = new Counter(),
             countSolutions = new Counter(),
             countIndexOps = new Counter(),
@@ -112,7 +119,30 @@ public class QueryEngineImpl implements QueryEngine {
         ValueFactory valueFactory = new ValueFactoryImpl();
         filterEvaluator = new FilterEvaluator(valueFactory);
 
+        counters = new LinkedHashMap<Quantity, Counter>();
+        counters.put(Quantity.Queries, countQueries);
+        counters.put(Quantity.Statements, countStatements);
+        counters.put(Quantity.TriplePatterns, countTriplePatterns);
+        counters.put(Quantity.PartialSolutions, countPartialSolutions);
+        counters.put(Quantity.Solutions, countSolutions);
+        counters.put(Quantity.IndexingOperations, countIndexOps);
+        counters.put(Quantity.BindingOperations, countBindingOps);
+        counters.put(Quantity.ReplacementOperations, countReplaceOps);
+
         clear();
+    }
+
+    public long get(final Quantity quantity) {
+        if (!SesameStream.getDoPerformanceMetrics()) {
+            throw new IllegalStateException("performance metrics are disabled; quantities are not counted");
+        }
+
+        Counter counter = counters.get(quantity);
+        if (null == counter) {
+            throw new IllegalArgumentException("no counter for quantity: " + quantity);
+        }
+
+        return counter.count;
     }
 
     /**
@@ -562,24 +592,23 @@ public class QueryEngineImpl implements QueryEngine {
 
     private void logHeader() {
         if (SesameStream.getDoPerformanceMetrics()) {
-            System.out.println(
-                    "LOG\ttime1,time2,queries,statements,patterns,partial,solutions,indexOps,bindingOps,replaceOps");
+            StringBuilder sb = new StringBuilder("LOG\ttime1,time2");
+            for (Quantity q : counters.keySet()) {
+                sb.append(",").append(q.name());
+            }
+            System.out.println(sb.toString());
         }
     }
 
     private void logEntry() {
         if (SesameStream.getDoPerformanceMetrics()) {
             if (!SesameStream.getDoUseCompactLogFormat() || logHasChanged) {
-                System.out.println("LOG\t" + timeCurrentOperationBegan
-                        + "," + System.currentTimeMillis()
-                        + "," + countQueries.getCount()
-                        + "," + countStatements.getCount()
-                        + "," + countTriplePatterns.getCount()
-                        + "," + countPartialSolutions.getCount()
-                        + "," + countSolutions.getCount()
-                        + "," + countIndexOps.getCount()
-                        + "," + countBindingOps.getCount()
-                        + "," + countReplaceOps.getCount());
+                StringBuilder sb = new StringBuilder("LOG\t");
+                sb.append(timeCurrentOperationBegan).append(",").append(System.currentTimeMillis());
+                for (Map.Entry<Quantity, Counter> entry : counters.entrySet()) {
+                    sb.append(",").append(entry.getValue().count);
+                }
+                System.out.println(sb.toString());
 
                 logHasChanged = false;
             }

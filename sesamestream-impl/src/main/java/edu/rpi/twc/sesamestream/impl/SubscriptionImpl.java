@@ -51,6 +51,6 @@ public class SubscriptionImpl implements Subscription {
     public void cancel() {
         active = false;
 
-        // TODO: in future, also free up the resources (esp. in TripleIndex) occupied by this subscription
+        // TODO: in the future, also free up the resources (esp. in TripleIndex) occupied by this subscription
     }
 }
