@@ -1,9 +1,12 @@
 package edu.rpi.twc.sesamestream.tuple;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Stack;
+import java.util.logging.Logger;
 
 /**
  * An index of partial and complete solutions for a given query
@@ -22,14 +25,14 @@ public class SolutionIndex<T> {
         this.totalPatterns = totalPatterns;
     }
 
-    public void add(final Solution<T> ps) {
+    public void add(final Solution<T> ps, final long now) {
         // make the added partial solution accessible through each of its bindings
         for (Map.Entry<String, T> e : ps.getBindings().entrySet()) {
-            add(e.getKey(), e.getValue(), ps);
+            add(e.getKey(), e.getValue(), ps, now);
         }
     }
 
-    public void add(final String variable, final T value, final Solution<T> ps) {
+    public void add(final String variable, final T value, final Solution<T> ps, final long now) {
         Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(variable);
         if (null == byVariable) {
             byVariable = new HashMap<T, GroupIndex<T>>();
@@ -42,7 +45,7 @@ public class SolutionIndex<T> {
             byVariable.put(value, byValue);
         }
 
-        byValue.add(ps);
+        byValue.add(ps, now);
     }
 
     public Iterator<Solution<T>> getSolutions(final String variable, final T value) {
@@ -135,6 +138,44 @@ public class SolutionIndex<T> {
         }
     }
 
+    public long removeExpiredSolutions(final long now) {
+        int removedSolutions = 0;
+
+        Collection<SolutionGroup<T>> toRemove = new LinkedList<SolutionGroup<T>>();
+
+        for (Map.Entry<String, Map<T, GroupIndex<T>>> e : solutionsByBinding.entrySet()) {
+            for (Map.Entry<T, GroupIndex<T>> e2 : e.getValue().entrySet()) {
+                GroupIndex<T> gi = e2.getValue();
+                for (Map.Entry<Long, SolutionGroup<T>> e3 : gi.groups.entrySet()) {
+                    SolutionGroup<T> g = e3.getValue();
+                    removedSolutions += g.removeExpired(now);
+                    if (g.getSolutions().isNil()) {
+                        toRemove.add(g);
+                    }
+                }
+            }
+        }
+
+        for (SolutionGroup<T> g : toRemove) {
+            VariableBindings<T> bindings = g.getBindings();
+            for (Map.Entry<String, T> e : bindings.entrySet()) {
+                GroupIndex<T> gi = getGroupIndex(e.getKey(), e.getValue());
+                if (null != gi) {
+                    gi.groups.remove(bindings.getHash());
+                    if (0 == gi.groups.size()) {
+                        Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(e.getKey());
+                        byVariable.remove(e.getValue());
+                        if (0 == byVariable.size()) {
+                            solutionsByBinding.remove(e.getKey());
+                        }
+                    }
+                }
+            }
+        }
+
+        return removedSolutions;
+    }
+
     private GroupIndex<T> getGroupIndex(final String variable, final T value) {
         Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(variable);
         if (null == byVariable) {
@@ -147,7 +188,8 @@ public class SolutionIndex<T> {
     private static class GroupIndex<T> {
         private final Map<Long, SolutionGroup<T>> groups = new HashMap<Long, SolutionGroup<T>>();
 
-        public void add(final Solution<T> ps) {
+        public void add(final Solution<T> ps,
+                        final long now) {
             long h = ps.getBindings().getHash();
             SolutionGroup<T> g = groups.get(h);
 
@@ -157,14 +199,14 @@ public class SolutionIndex<T> {
                 groups.put(h, g);
             }
 
-            g.add(ps);
+            g.add(ps, now);
         }
     }
 
     private static class SolutionIterator<T> implements Iterator<Solution<T>> {
 
         // note: solution is mutated on each call to next().  Read but do not store the object.
-        private final Solution<T> solution = new Solution<T>(0, 0, null);
+        private final Solution<T> solution = new Solution<T>(0, 0, null, 0);
 
         private final Iterator<SolutionGroup<T>> groupIterator;
         private LList<SolutionPattern> currentSolutions;
@@ -194,7 +236,7 @@ public class SolutionIndex<T> {
 
             SolutionPattern r = currentSolutions.getValue();
             // update the type info of the current solution on each step
-            solution.setSolutionType(r.remainingPatterns, r.matchedPatterns);
+            solution.copyFrom(r);
 
             return solution;
         }

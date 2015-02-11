@@ -13,6 +13,8 @@ import static org.junit.Assert.assertTrue;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SolutionTest {
+    private long exp = 0;
+
     @Test
     public void testCompatibility() throws Exception {
         Solution<String> ps1, ps2;
@@ -25,13 +27,13 @@ public class SolutionTest {
         map1.put("x", "red");
         map1.put("y", "green");
         b1 = new VariableBindings<String>(map1, vars);
-        ps1 = new Solution<String>(3, 0, b1);
+        ps1 = new Solution<String>(3, 0, b1, exp);
 
         map2 = new HashMap<String, String>();
         map2.put("x", "red");
         map2.put("y", "green");
         b2 = new VariableBindings<String>(map2, vars);
-        ps2 = new Solution<String>(3, 1, b2);
+        ps2 = new Solution<String>(3, 1, b2, exp);
         assertTrue(ps1.complements(ps2, vars));
         assertTrue(ps2.complements(ps1, vars));
 
@@ -39,7 +41,7 @@ public class SolutionTest {
         map2.put("x", "red");
         map2.put("y", "blue");
         b2 = new VariableBindings<String>(map2, vars);
-        ps2 = new Solution<String>(3, 1, b2);
+        ps2 = new Solution<String>(3, 1, b2, exp);
         assertFalse(ps1.complements(ps2, vars));
         assertFalse(ps2.complements(ps1, vars));
 
@@ -47,7 +49,7 @@ public class SolutionTest {
         map2.put("x", "red");
         map2.put("z", "blue");
         b2 = new VariableBindings<String>(map2, vars);
-        ps2 = new Solution<String>(3, 1, b2);
+        ps2 = new Solution<String>(3, 1, b2, exp);
         assertTrue(ps1.complements(ps2, vars));
         assertTrue(ps2.complements(ps1, vars));
 
@@ -55,7 +57,7 @@ public class SolutionTest {
         map2 = new HashMap<String, String>();
         map2.put("z", "blue");
         b2 = new VariableBindings<String>(map2, vars);
-        ps2 = new Solution<String>(3, 1, b2);
+        ps2 = new Solution<String>(3, 1, b2, exp);
         assertTrue(ps1.complements(ps2, vars));
         assertTrue(ps2.complements(ps1, vars));
 
@@ -63,7 +65,7 @@ public class SolutionTest {
         map2 = new HashMap<String, String>();
         map2.put("z", "blue");
         b2 = new VariableBindings<String>(map2, vars);
-        ps2 = new Solution<String>(3, 0, b2);
+        ps2 = new Solution<String>(3, 0, b2, exp);
         assertFalse(ps1.complements(ps2, vars));
         assertFalse(ps2.complements(ps1, vars));
     }
@@ -80,14 +82,14 @@ public class SolutionTest {
         map1.put("x", "red");
         map1.put("y", "green");
         b1 = new VariableBindings<String>(map1, vars);
-        ps1 = new Solution<String>(3, 0, b1);
+        ps1 = new Solution<String>(3, 0, b1, exp);
 
         // "a" and "b" do not belong to the set of query variables
         map2 = new HashMap<String, String>();
         map2.put("a", "red");
         map2.put("b", "green");
         b2 = new VariableBindings<String>(map2, vars);
-        ps2 = new Solution<String>(3, 0, b2);
+        ps2 = new Solution<String>(3, 0, b2, exp);
 
         // this fails with an exception
         ps1.complements(ps2, vars);

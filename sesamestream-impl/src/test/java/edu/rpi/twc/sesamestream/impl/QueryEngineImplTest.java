@@ -250,7 +250,6 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
 
     @Test
     public void testCircleJoins() throws Exception {
-        // TODO: add files
 //        compareAnswers(
 //                loadData("example.nq"),
 //                loadQuery("simple-cycle.rq"));

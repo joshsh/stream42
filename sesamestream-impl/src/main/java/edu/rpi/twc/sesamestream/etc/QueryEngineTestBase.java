@@ -44,6 +44,8 @@ public class QueryEngineTestBase {
     protected QueryEngineImpl queryEngine;
     protected ValueFactory vf = new ValueFactoryImpl();
 
+    protected final long TEST_TTL = 0;
+
     protected BindingSetHandler simpleBindingSetHandler = new BindingSetHandler() {
         public void handle(final BindingSet result) {
             System.out.println("result: " + result);
@@ -146,7 +148,7 @@ public class QueryEngineTestBase {
         }
 
         for (Statement s : data) {
-            queryEngine.addStatement(s);
+            queryEngine.addStatement(TEST_TTL, s);
         }
 
         return answers;
@@ -171,7 +173,7 @@ public class QueryEngineTestBase {
         queryEngine.addQuery(query, h);
 
         for (Statement s : data) {
-            queryEngine.addStatement(s);
+            queryEngine.addStatement(TEST_TTL, s);
         }
 
         Set<BindingSet> distinct = new HashSet<BindingSet>();

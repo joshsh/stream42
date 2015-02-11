@@ -159,8 +159,16 @@ public class QueryIndexTest {
         assertSolutions(tuple, map1, map2, map3);
     }
 
+    @Test
+    public void testTtl() throws Exception {
+
+    }
+
+    // note: assumes infinite ttl
     private <T> void assertSolutions(final Tuple<T> tuple,
                                      final Map<String, T>... expected) {
+        long ttl = 0;
+
         final Map<Long, VariableBindings<T>> all = new HashMap<Long, VariableBindings<T>>();
 
         Map<Long, Integer> expectedCount = new HashMap<Long, Integer>();
@@ -190,7 +198,7 @@ public class QueryIndexTest {
         };
 
         QueryIndex<T> index = (QueryIndex<T>) queryIndex;
-        index.match(tuple, handler);
+        index.match(tuple, handler, ttl);
 
         for (Map.Entry<Long, VariableBindings<T>> e : all.entrySet()) {
             Integer act = actualCount.get(e.getKey());

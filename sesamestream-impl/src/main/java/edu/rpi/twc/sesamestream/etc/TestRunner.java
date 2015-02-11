@@ -56,6 +56,8 @@ public class TestRunner {
                               final List<String> dataFiles)
             throws IOException, MalformedQueryException, QueryEngine.IncompatibleQueryException, RDFHandlerException {
 
+        long ttl = 0;
+
         QueryEngineImpl engine = new QueryEngineImpl();
         QueryParser queryParser = new SPARQLParser();
         String baseUri = "http://example.org/base-uri/";
@@ -102,7 +104,7 @@ public class TestRunner {
             }
 
             //StatementListBuilder h = new StatementListBuilder();
-            RDFHandler h = new QueryEngineAdder(engine);
+            RDFHandler h = new QueryEngineAdder(engine, ttl);
 
             InputStream in = new FileInputStream(new File(f));
             try {

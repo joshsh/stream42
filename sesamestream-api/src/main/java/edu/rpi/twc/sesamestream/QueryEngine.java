@@ -20,8 +20,8 @@ public interface QueryEngine {
     /**
      * Adds a new query subscription to this query engine
      *
-     * @param q the query to add
-     * @param h a handler for future query answers
+     * @param query the query to add
+     * @param handler a handler for future query answers
      * @return a subscription for computation of future query answers
      * @throws InvalidQueryException if the query is not valid SPARQL
      * @throws IncompatibleQueryException if the query is valid SPARQL,
@@ -29,8 +29,8 @@ public interface QueryEngine {
      * @throws IOException if there is a problem communicating with this query engine
      * (for example, if there are network operations involved)
      */
-    Subscription addQuery(String q,
-                          BindingSetHandler h) throws IOException, IncompatibleQueryException, InvalidQueryException;
+    Subscription addQuery(String query, BindingSetHandler handler)
+            throws IOException, IncompatibleQueryException, InvalidQueryException;
 
     /**
      * Adds a new statement to this query engine.
@@ -39,11 +39,14 @@ public interface QueryEngine {
      * trigger the creation of partial solutions which are stored in anticipation of further statements,
      * or trigger the production query answers.
      *
-     * @param s the statement to add
+     * @param ttl the time-to-live of the added statement, in milliseconds.
+     *            If ttl > 0, any partial solutions which are computed in response to the statement have a finite
+     *            lifetime, and will expire from the index at the end of that lifetime.
+     * @param statement the statement to add
      * @throws IOException if there is a problem communicating with this query engine
      * (for example, if there are network operations involved)
      */
-    void addStatement(Statement s) throws IOException;
+    void addStatement(long ttl, Statement statement) throws IOException;
 
     /**
      * Adds new statements to this query engine.
@@ -52,11 +55,14 @@ public interface QueryEngine {
      * trigger the creation of partial solutions which are stored in anticipation of further statements,
      * or trigger the production query answers.
      *
+     * @param ttl the time-to-live of the added statements, in milliseconds.
+     *            If ttl > 0, any partial solutions which are computed in response to those statements have a finite
+     *            lifetime, and will expire from the index at the end of that lifetime.
      * @param statements the statements to add.  Statements are added in array order
      * @throws IOException if there is a problem communicating with this query engine
      * (for example, if there are network operations involved)
      */
-    void addStatements(Statement... statements) throws IOException;
+    void addStatements(long ttl, Statement... statements) throws IOException;
 
     /**
      * Adds new statements to this query engine.
@@ -65,11 +71,14 @@ public interface QueryEngine {
      * trigger the creation of partial solutions which are stored in anticipation of further statements,
      * or trigger the production query answers.
      *
+     * @param ttl the time-to-live of the added statements, in milliseconds.
+     *            If ttl > 0, any partial solutions which are computed in response to those statements have a finite
+     *            lifetime, and will expire from the index at the end of that lifetime.
      * @param statements the statements to add.  Statements are added in the iterator order of the collection
      * @throws IOException if there is a problem communicating with this query engine
      * (for example, if there are network operations involved)
      */
-    void addStatements(Collection<Statement> statements) throws IOException;
+    void addStatements(long ttl, Collection<Statement> statements) throws IOException;
 
     /**
      * An exception thrown when a query is not valid SPARQL

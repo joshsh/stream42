@@ -37,6 +37,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -51,6 +54,9 @@ import java.util.logging.Logger;
  */
 public class QueryEngineImpl implements QueryEngine {
     private static final Logger logger = Logger.getLogger(QueryEngineImpl.class.getName());
+
+    private static final long TTL_CLEANUP_INITIAL_DELAY_MS = 5000;
+    private static final long TTL_CLEANUP_PERIOD_MS = 30000;
 
     private final QueryIndex<Value> queryIndex;
 
@@ -97,6 +103,8 @@ public class QueryEngineImpl implements QueryEngine {
         };
 
         clear();
+
+        scheduleTtlCleanup();
     }
 
     /**
@@ -156,7 +164,7 @@ public class QueryEngineImpl implements QueryEngine {
     }
 
     public Subscription addQuery(final String q,
-                                 final BindingSetHandler h) throws IncompatibleQueryException, InvalidQueryException {
+                                 final BindingSetHandler handler) throws IncompatibleQueryException, InvalidQueryException {
         // TODO
         String baseURI = "http://example.org/baseURI";
 
@@ -170,7 +178,7 @@ public class QueryEngineImpl implements QueryEngine {
             throw new InvalidQueryException(e);
         }
 
-        return addQuery(query.getTupleExpr(), h);
+        return addQuery(query.getTupleExpr(), handler);
     }
 
     /**
@@ -202,12 +210,12 @@ public class QueryEngineImpl implements QueryEngine {
         return s;
     }
 
-    public void addStatement(final Statement s) {
+    public void addStatement(final long ttl, final Statement s) {
         increment(countStatements, false);
         timeCurrentOperationBegan = System.currentTimeMillis();
 
         Tuple<Value> tuple = toNative(s);
-        boolean matched = queryIndex.match(tuple, solutionHandler);
+        boolean matched = queryIndex.match(tuple, solutionHandler, ttl);
 
         // cue the Linked Data cache to dereference the subject and object URIs of the statement,
         // but only if at least one pattern in the index has matched the tuple
@@ -218,16 +226,29 @@ public class QueryEngineImpl implements QueryEngine {
         logEntry();
     }
 
-    public void addStatements(final Statement... statements) {
+    public void addStatements(final long ttl, final Statement... statements) {
         for (Statement s : statements) {
-            addStatement(s);
+            addStatement(ttl, s);
         }
     }
 
-    public void addStatements(final Collection<Statement> statements) {
+    public void addStatements(final long ttl, final Collection<Statement> statements) {
         for (Statement s : statements) {
-            addStatement(s);
+            addStatement(ttl, s);
         }
+    }
+
+    private void scheduleTtlCleanup() {
+        ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+        service.scheduleWithFixedDelay(new Runnable() {
+            public void run() {
+                try {
+                    queryIndex.removeExpiredSolutions();
+                } catch (Throwable t) {
+                    logger.log(Level.SEVERE, "TTL cleanup task failed", t);
+                }
+            }
+        }, TTL_CLEANUP_INITIAL_DELAY_MS, TTL_CLEANUP_PERIOD_MS, TimeUnit.MILLISECONDS);
     }
 
     private Tuple<Value> toNative(final Statement s) {

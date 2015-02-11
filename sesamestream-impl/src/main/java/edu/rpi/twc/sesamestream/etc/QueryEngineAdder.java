@@ -15,9 +15,12 @@ import java.io.IOException;
  */
 public class QueryEngineAdder implements RDFHandler {
     private final QueryEngine queryEngine;
+    private final long ttl;
 
-    public QueryEngineAdder(final QueryEngine queryEngine) {
+    public QueryEngineAdder(final QueryEngine queryEngine,
+                            final long ttl) {
         this.queryEngine = queryEngine;
+        this.ttl = ttl;
     }
 
     public void startRDF() throws RDFHandlerException {
@@ -31,7 +34,7 @@ public class QueryEngineAdder implements RDFHandler {
 
     public void handleStatement(Statement s) throws RDFHandlerException {
         try {
-            queryEngine.addStatement(s);
+            queryEngine.addStatement(ttl, s);
         } catch (IOException e) {
             throw new RDFHandlerException(e);
         }

@@ -9,6 +9,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.logging.Logger;
 
 /**
  * A recursive data structure which indexes tuple-based graph patterns and matches incoming tuples against
@@ -17,6 +18,8 @@ import java.util.Stack;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class QueryIndex<T> {
+    private static final Logger logger = Logger.getLogger(QueryIndex.class.getName());
+
     // the "leaves" of this index
     private Set<TuplePattern<T>> patterns;
     // child indices matching specific values
@@ -99,10 +102,15 @@ public class QueryIndex<T> {
      * If no tuple pattern is applied, the tuple simply passes through.
      */
     public synchronized boolean match(final Tuple<T> tuple,
-                                      final SolutionHandler<T> handler) {
+                                      final SolutionHandler<T> handler,
+                                      final long ttl) {
         if (rootMetadata.tupleSize != tuple.getElements().length) {
             throw new IllegalArgumentException("tuple is not of expected length " + rootMetadata.tupleSize);
         }
+
+        long now = System.currentTimeMillis();
+
+        long expirationTime = ttl > 0 ? now + ttl : 0;
 
         // reset in case of previous exceptions
         rootMetadata.clearSolutionMetadata();
@@ -111,11 +119,30 @@ public class QueryIndex<T> {
         // applied to the tuple.
         // Do not allow solutions created while processing one tuple pattern to be accessible while processing
         // the next.
-        boolean matched = match(tuple, 0, rootMetadata);
+        boolean matched = match(tuple, 0, rootMetadata, expirationTime);
 
-        produceSolutions(handler, rootMetadata);
+        produceSolutions(handler, rootMetadata, now);
 
         return matched;
+    }
+
+    /**
+     * Enforce tuple time-to-live by removing expired solutions.
+     * This is a space-saving operation which has no effect on query evaluation;
+     * it forces all expired solutions to be removed at once, rather than merely becoming irrelevant
+     * and being gradually removed upon discovery.
+     */
+    public synchronized void removeExpiredSolutions() {
+        long now = System.currentTimeMillis();
+        int removedSolutions = 0;
+
+        for (GraphPattern<T> gp : rootMetadata.graphPatterns) {
+            SolutionIndex<T> index = gp.getSolutionIndex();
+            removedSolutions += index.removeExpiredSolutions(now);
+        }
+
+        long endTime = System.currentTimeMillis();
+        logger.info("removed " + removedSolutions + " solutions in " + (endTime - now) + "ms");
     }
 
     private void add(final TuplePattern<T> pattern,
@@ -174,23 +201,24 @@ public class QueryIndex<T> {
 
     private boolean match(final Tuple<T> tuple,
                           final int level,
-                          final RootMetadata<T> meta) {
+                          final RootMetadata<T> meta,
+                          final long expirationTime) {
         boolean matched = false;
 
         if (meta.tupleSize == level) {
             for (TuplePattern<T> pattern : patterns) {
-                match(pattern, tuple, meta);
+                match(pattern, tuple, meta, expirationTime);
                 matched = true;
             }
         } else {
             if (null != wildcardIndex) {
-                matched = wildcardIndex.match(tuple, level + 1, meta);
+                matched = wildcardIndex.match(tuple, level + 1, meta, expirationTime);
             }
 
             if (null != valueIndexes) {
                 QueryIndex<T> idx = valueIndexes.get(tuple.getElements()[level]);
                 if (null != idx) {
-                    matched |= idx.match(tuple, level + 1, meta);
+                    matched |= idx.match(tuple, level + 1, meta, expirationTime);
                 }
             }
         }
@@ -200,7 +228,8 @@ public class QueryIndex<T> {
 
     private void match(final TuplePattern<T> pattern,
                        final Tuple<T> tuple,
-                       final RootMetadata<T> meta) {
+                       final RootMetadata<T> meta,
+                       final long expirationTime) {
         Map<String, T> bindings = new HashMap<String, T>();
         for (int i = 0; i < meta.tupleSize; i++) {
             String v = pattern.getTerms()[i].getVariable();
@@ -212,7 +241,7 @@ public class QueryIndex<T> {
 
         // create a new partial solution
         Solution<T> solutionMatched = new Solution<T>(
-                pattern.getGraphPattern().getPatterns().size(), pattern.getIndex(), b);
+                pattern.getGraphPattern().getPatterns().size(), pattern.getIndex(), b, expirationTime);
 
         TuplePatternSolutions<T> ts = bindAndSolve(solutionMatched, pattern, tuple, meta);
         meta.tpSolutions.add(ts);
@@ -250,7 +279,8 @@ public class QueryIndex<T> {
     }
 
     private void produceSolutions(final SolutionHandler<T> handler,
-                                  final RootMetadata<T> meta) {
+                                  final RootMetadata<T> meta,
+                                  final long now) {
         for (TuplePatternSolutions<T> ts : meta.tpSolutions) {
             SolutionIndex<T> solutionIndex = ts.pattern.getGraphPattern().getSolutionIndex();
             Set<Long> hashes = ts.pattern.getGraphPattern().getSolutionHashes();
@@ -268,7 +298,7 @@ public class QueryIndex<T> {
                     handler.handle(ts.pattern.getGraphPattern().getSubscription(), ps.getBindings());
                 }
 
-                solutionIndex.add(ps);
+                solutionIndex.add(ps, now);
             }
         }
 
