@@ -1,6 +1,9 @@
 package edu.rpi.twc.sesamestream.impl;
 
 import edu.rpi.twc.sesamestream.QueryEngine;
+import edu.rpi.twc.sesamestream.tuple.LList;
+import edu.rpi.twc.sesamestream.tuple.Term;
+import edu.rpi.twc.sesamestream.tuple.TuplePattern;
 import org.openrdf.model.Value;
 import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Distinct;
@@ -26,16 +29,14 @@ import org.openrdf.query.algebra.helpers.TupleExprs;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Logger;
 
 /**
- * SesameStream's internal representation of a SPARQL query
+ * An internal representation of a SPARQL query
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
@@ -46,10 +47,9 @@ public class Query {
     private final LinkedHashSet<String> bindingNames;
 
     private Map<String, String> extendedBindingNames;
-    private LList<TriplePattern> graphPattern;
+    private LList<TuplePattern<Value>> triplePatterns;
     private List<Filter> filters;
     private Map<String, Value> constants;
-    //private Map<String,>
 
     private final SolutionSequenceModifier sequenceModifier = new SolutionSequenceModifier();
 
@@ -62,15 +62,12 @@ public class Query {
 
     private final QueryForm queryForm;
 
-    public Query(final TupleExpr expr,
-                 final QueryEngineImpl.TriplePatternDeduplicator deduplicator)
+    public Query(final TupleExpr expr)
             throws QueryEngine.IncompatibleQueryException {
 
         bindingNames = new LinkedHashSet<String>();
 
-        graphPattern = LList.NIL;
-
-        //System.out.println("query: " + expr);
+        triplePatterns = LList.NIL;
 
         List<QueryModelNode> l = visit(expr);
         if (l.size() != 1) {
@@ -91,8 +88,22 @@ public class Query {
         }
 
         for (StatementPattern pat : patterns) {
-            graphPattern = graphPattern.push(deduplicator.deduplicate(new TriplePattern(pat)));
+            triplePatterns = triplePatterns.push(toNative(pat));
         }
+    }
+
+    private TuplePattern<Value> toNative(StatementPattern sp) {
+        // note: assumes tupleSize==3
+        return new TuplePattern<Value>(new Term[]{
+                toNative(sp.getSubjectVar()),
+                toNative(sp.getPredicateVar()),
+                toNative(sp.getObjectVar())});
+    }
+
+    private Term<Value> toNative(Var v) {
+        return v.hasValue()
+                ? new Term<Value>(v.getValue(), null)
+                : new Term<Value>(null, v.getName());
     }
 
     /**
@@ -142,8 +153,8 @@ public class Query {
         extendedBindingNames.put(from, to);
     }
 
-    public LList<TriplePattern> getGraphPattern() {
-        return graphPattern;
+    public LList<TuplePattern<Value>> getTriplePatterns() {
+        return triplePatterns;
     }
 
     /**
@@ -267,12 +278,8 @@ public class Query {
             findPatterns((StatementPattern) filterChild, patterns);
         } else {
             if (filterChild instanceof Filter) {
-                //System.out.println("filterChild = " + filterChild);
                 Filter childFilter = (Filter) filterChild;
                 ValueExpr ve = childFilter.getCondition();
-                System.out.println("ve = " + ve);
-                //TupleExpr te = childFilter.getArg();
-                //System.out.println("te = " + te);
             }
 
             throw new QueryEngine.IncompatibleQueryException(
@@ -323,7 +330,6 @@ public class Query {
         }
 
         if (null != ext) {
-            //System.out.println("visiting children");
             l = visitChildren(ext);
         }
 
@@ -376,7 +382,6 @@ public class Query {
     }
 
     private List<QueryModelNode> visit(final QueryModelNode node) {
-        //System.out.println("### visit");
         List<QueryModelNode> visited = new LinkedList<QueryModelNode>();
         SimpleQueryModelVisitor v = new SimpleQueryModelVisitor(visited);
 
@@ -394,7 +399,6 @@ public class Query {
     }
 
     private List<QueryModelNode> visitChildren(final QueryModelNode node) {
-        //System.out.println("### visitChildren");
         List<QueryModelNode> visited = new LinkedList<QueryModelNode>();
         SimpleQueryModelVisitor v = new SimpleQueryModelVisitor(visited);
 

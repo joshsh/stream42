@@ -1,13 +1,13 @@
 package edu.rpi.twc.sesamestream.tuple;
 
-import edu.rpi.twc.sesamestream.impl.LList;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Stack;
 
 /**
+ * An index of partial and complete solutions for a given query
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SolutionIndex<T> {

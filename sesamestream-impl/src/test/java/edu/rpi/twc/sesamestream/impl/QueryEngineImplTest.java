@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
-import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.sail.memory.MemoryStore;

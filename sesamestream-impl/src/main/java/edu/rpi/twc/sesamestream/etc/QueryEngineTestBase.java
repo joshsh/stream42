@@ -1,14 +1,11 @@
 package edu.rpi.twc.sesamestream.etc;
 
 import edu.rpi.twc.sesamestream.BindingSetHandler;
-import edu.rpi.twc.sesamestream.impl.PartialSolution;
 import edu.rpi.twc.sesamestream.SesameStream;
-import edu.rpi.twc.sesamestream.impl.Visitor;
 import edu.rpi.twc.sesamestream.impl.QueryEngineImpl;
 import info.aduna.io.IOUtil;
 import info.aduna.iteration.CloseableIteration;
 import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.query.BindingSet;
@@ -180,17 +177,20 @@ public class QueryEngineTestBase {
         Set<BindingSet> distinct = new HashSet<BindingSet>();
         distinct.addAll(answers);
 
+        /*
         if (debug) {
             System.out.println("" + answers.size() + " solutions ("
                     + distinct.size() + " distinct, " + countPartialSolutions()
                     + " partial) from " + data.size() + " statements");
         }
+        */
 
         return answers;
     }
 
     private long count;
 
+    /*
     protected synchronized long countPartialSolutions() {
         count = 0;
 
@@ -203,6 +203,7 @@ public class QueryEngineTestBase {
 
         return count;
     }
+    */
 
     public class NullBindingSetHandler implements BindingSetHandler {
         public void handle(final BindingSet result) {

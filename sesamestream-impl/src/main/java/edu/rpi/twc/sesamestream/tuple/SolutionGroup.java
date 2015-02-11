@@ -1,7 +1,5 @@
 package edu.rpi.twc.sesamestream.tuple;
 
-import edu.rpi.twc.sesamestream.impl.LList;
-
 /**
  * A group of partial solutions with identical bindings but potentially different sets of matched tuple patterns.
  * The group takes advantage of containment relationships to eliminate redundant or weak solutions, saving work.

@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream.impl;
+package edu.rpi.twc.sesamestream.tuple;
 
 import java.util.Collection;
 

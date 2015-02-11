@@ -46,6 +46,6 @@ public class DBpediaTest extends QueryEngineTestBase {
             queryEngine.addStatement(st);
         }
 
-        queryEngine.getIndex().print();
+        //queryEngine.getIndex().print();
     }
 }
