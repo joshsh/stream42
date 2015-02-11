@@ -33,7 +33,7 @@ public class DBpediaTest extends QueryEngineTestBase {
     public void testQuery3() throws Exception {
         TupleExpr q3 = loadQuery("dbpedia-q3.rq");
 
-        queryEngine.addQuery(q3, simpleBindingSetHandler);
+        queryEngine.addQuery(QUERY_TTL, q3, simpleBindingSetHandler);
 
         List<Statement> l = loadData("/tmp/dbpedia-singlefile-randomized-100000.nt");
         long i = 0;
@@ -43,7 +43,7 @@ public class DBpediaTest extends QueryEngineTestBase {
                 break;
             }
 
-            queryEngine.addStatement(TEST_TTL, st);
+            queryEngine.addStatement(TUPLE_TTL, st);
         }
 
         //queryEngine.getIndex().print();

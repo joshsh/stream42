@@ -44,7 +44,7 @@ public class QueryEngineTestBase {
     protected QueryEngineImpl queryEngine;
     protected ValueFactory vf = new ValueFactoryImpl();
 
-    protected final long TEST_TTL = 0;
+    protected final long TUPLE_TTL = 0, QUERY_TTL = 0;
 
     protected BindingSetHandler simpleBindingSetHandler = new BindingSetHandler() {
         public void handle(final BindingSet result) {
@@ -142,13 +142,13 @@ public class QueryEngineTestBase {
                 }
             };
 
-            queryEngine.addQuery(t, h);
+            queryEngine.addQuery(QUERY_TTL, t, h);
 
             i++;
         }
 
         for (Statement s : data) {
-            queryEngine.addStatement(TEST_TTL, s);
+            queryEngine.addStatement(TUPLE_TTL, s);
         }
 
         return answers;
@@ -170,10 +170,10 @@ public class QueryEngineTestBase {
             }
         };
 
-        queryEngine.addQuery(query, h);
+        queryEngine.addQuery(QUERY_TTL, query, h);
 
         for (Statement s : data) {
-            queryEngine.addStatement(TEST_TTL, s);
+            queryEngine.addStatement(TUPLE_TTL, s);
         }
 
         Set<BindingSet> distinct = new HashSet<BindingSet>();

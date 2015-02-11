@@ -36,6 +36,8 @@ import java.util.List;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class TestRunner {
+    private static long QUERY_TTL = 0;
+
     public static void main(final String[] args) throws Exception {
         if (2 != args.length) {
             printUsageAndExit();
@@ -87,7 +89,7 @@ public class TestRunner {
                 String query = IOUtil.readString(in);
                 ParsedQuery pq = queryParser.parseQuery(query, baseUri);
 
-                engine.addQuery(pq.getTupleExpr(), bsh);
+                engine.addQuery(QUERY_TTL, pq.getTupleExpr(), bsh);
             } finally {
                 in.close();
             }

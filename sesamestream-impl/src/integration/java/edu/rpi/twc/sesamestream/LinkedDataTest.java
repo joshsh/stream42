@@ -41,7 +41,7 @@ public class LinkedDataTest extends QueryEngineTestBase {
                     public Sink<Statement> statementSink() {
                         return new Sink<Statement>() {
                             public void put(final Statement s) throws RippleException {
-                                queryEngine.addStatement(TEST_TTL, s);
+                                queryEngine.addStatement(TUPLE_TTL, s);
                             }
                         };
                     }
@@ -62,9 +62,9 @@ public class LinkedDataTest extends QueryEngineTestBase {
         queryEngine.setLinkedDataCache(cache, sail);
 
         TupleExpr query = loadQuery("linked-data-join-1.rq");
-        queryEngine.addQuery(query, simpleBindingSetHandler);
+        queryEngine.addQuery(QUERY_TTL, query, simpleBindingSetHandler);
         for (Statement s : loadData("example.nq")) {
-            queryEngine.addStatement(TEST_TTL, s);
+            queryEngine.addStatement(TUPLE_TTL, s);
         }
     }
 }

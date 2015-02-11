@@ -33,6 +33,7 @@ import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailException;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -82,6 +83,8 @@ public class QueryEngineImpl implements QueryEngine {
 
     private final FilterEvaluator filterEvaluator;
 
+    private final Map<String, SubscriptionImpl> subscriptions = new HashMap<String, SubscriptionImpl>();
+
     /**
      * Creates a new query engine with an empty index
      */
@@ -97,8 +100,8 @@ public class QueryEngineImpl implements QueryEngine {
         counters.put(Quantity.Solutions, countSolutions);
         solutionHandler = new QueryIndex.SolutionHandler<Value>() {
             @Override
-            public void handle(final Subscription sub, final VariableBindings<Value> bindings) {
-                handleCandidateSolution((SubscriptionImpl) sub, bindings);
+            public void handle(final String id, final VariableBindings<Value> bindings) {
+                handleCandidateSolution(id, bindings);
             }
         };
 
@@ -109,6 +112,7 @@ public class QueryEngineImpl implements QueryEngine {
 
     /**
      * Retrieves a quantity tracked when "performance metrics" are enabled
+     *
      * @param quantity the quantity to retrieve
      * @return the current value of the retrieved quantity
      */
@@ -150,7 +154,7 @@ public class QueryEngineImpl implements QueryEngine {
      * It should not be necessary to interact with the index directly, but it is possible to inspect the index via
      * print and visit methods.
      */
-    public QueryIndex getIndex() {
+    public QueryIndex<Value> getIndex() {
         return queryIndex;
     }
 
@@ -163,7 +167,8 @@ public class QueryEngineImpl implements QueryEngine {
         logHeader();
     }
 
-    public Subscription addQuery(final String q,
+    public Subscription addQuery(final long ttl,
+                                 final String q,
                                  final BindingSetHandler handler) throws IncompatibleQueryException, InvalidQueryException {
         // TODO
         String baseURI = "http://example.org/baseURI";
@@ -178,7 +183,7 @@ public class QueryEngineImpl implements QueryEngine {
             throw new InvalidQueryException(e);
         }
 
-        return addQuery(query.getTupleExpr(), handler);
+        return addQuery(ttl, query.getTupleExpr(), handler);
     }
 
     /**
@@ -189,20 +194,23 @@ public class QueryEngineImpl implements QueryEngine {
      * @return a subscription for computation of future query answers
      * @throws IncompatibleQueryException if the syntax of the query is not supported by this engine
      */
-    public Subscription addQuery(final TupleExpr t,
+    public Subscription addQuery(final long ttl,
+                                 final TupleExpr t,
                                  final BindingSetHandler h) throws IncompatibleQueryException {
         increment(countQueries, true);
         timeCurrentOperationBegan = System.currentTimeMillis();
 
         Query q = new Query(t);
 
-        SubscriptionImpl s = new SubscriptionImpl(q, h);
-
-        GraphPattern<Value> graphPattern = toNative(s, q);
+        GraphPattern<Value> graphPattern = toNative(q, ttl);
         queryIndex.add(graphPattern);
+        SubscriptionImpl s = new SubscriptionImpl(q, graphPattern, h, this);
+        register(s);
 
-        for (TuplePattern<Value> p : graphPattern.getPatterns()) {
-            triggerLinkedDataCache(p);
+        if (null != linkedDataCache) {
+            for (TuplePattern<Value> p : graphPattern.getPatterns()) {
+                triggerLinkedDataCache(p);
+            }
         }
 
         logEntry();
@@ -212,14 +220,15 @@ public class QueryEngineImpl implements QueryEngine {
 
     public void addStatement(final long ttl, final Statement s) {
         increment(countStatements, false);
-        timeCurrentOperationBegan = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        timeCurrentOperationBegan = now;
 
         Tuple<Value> tuple = toNative(s);
-        boolean matched = queryIndex.match(tuple, solutionHandler, ttl);
+        boolean matched = queryIndex.match(tuple, solutionHandler, ttl, now);
 
         // cue the Linked Data cache to dereference the subject and object URIs of the statement,
         // but only if at least one pattern in the index has matched the tuple
-        if (matched) {
+        if (matched && null != linkedDataCache) {
             triggerLinkedDataCache(tuple);
         }
 
@@ -238,12 +247,28 @@ public class QueryEngineImpl implements QueryEngine {
         }
     }
 
+    private void register(final SubscriptionImpl subscription) {
+        subscriptions.put(subscription.getGraphPattern().getId(), subscription);
+    }
+
+    // free up the resources occupied by this subscription and prevent it from matching future data
+    public void unregister(final SubscriptionImpl subscription) {
+        queryIndex.remove(subscription.getGraphPattern());
+        subscriptions.remove(subscription.getGraphPattern().getId());
+    }
+
+    public void renew(final SubscriptionImpl subscription, final long ttl) {
+        long now = System.currentTimeMillis();
+        queryIndex.renew(subscription.getGraphPattern(), ttl, now);
+    }
+
     private void scheduleTtlCleanup() {
         ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
         service.scheduleWithFixedDelay(new Runnable() {
             public void run() {
                 try {
-                    queryIndex.removeExpiredSolutions();
+                    long now = System.currentTimeMillis();
+                    queryIndex.removeExpired(now);
                 } catch (Throwable t) {
                     logger.log(Level.SEVERE, "TTL cleanup task failed", t);
                 }
@@ -256,7 +281,7 @@ public class QueryEngineImpl implements QueryEngine {
         return new Tuple<Value>(new Value[]{s.getSubject(), s.getPredicate(), s.getObject()});
     }
 
-    private GraphPattern<Value> toNative(final Subscription s, final Query q) {
+    private GraphPattern<Value> toNative(final Query q, final long ttl) {
         List<TuplePattern<Value>> patterns = new LinkedList<TuplePattern<Value>>();
         LList<TuplePattern<Value>> tPatterns = q.getTriplePatterns();
         while (!tPatterns.isNil()) {
@@ -264,72 +289,71 @@ public class QueryEngineImpl implements QueryEngine {
             tPatterns = tPatterns.getRest();
         }
 
-        return new GraphPattern<Value>(s, patterns);
+        return new GraphPattern<Value>(patterns, ttl);
     }
 
     private void triggerLinkedDataCache(final Tuple<Value> tuple) {
-        if (null != linkedDataCache) {
-            Value[] a = tuple.getElements();
-            if (a.length >= 1) {
-                Value subject = a[0];
-                if (subject instanceof URI) {
-                    indexLinkedDataUri((URI) subject);
-                }
+        Value[] a = tuple.getElements();
+        if (a.length >= 1) {
+            Value subject = a[0];
+            if (subject instanceof URI) {
+                indexLinkedDataUri((URI) subject);
+            }
 
-                if (a.length >= 3) {
-                    Value object = a[2];
-                    if (object instanceof URI) {
-                        indexLinkedDataUri((URI) object);
-                    }
+            if (a.length >= 3) {
+                Value object = a[2];
+                if (object instanceof URI) {
+                    indexLinkedDataUri((URI) object);
                 }
             }
         }
     }
 
     private void triggerLinkedDataCache(final TuplePattern<Value> pattern) {
-        if (null != linkedDataCache) {
-            Term<Value>[] a = pattern.getTerms();
-            if (a.length >= 1) {
-                Value subject = a[0].getValue();
-                if (null != subject && subject instanceof URI) {
-                    indexLinkedDataUri((URI) subject);
-                }
+        Term<Value>[] a = pattern.getTerms();
+        if (a.length >= 1) {
+            Value subject = a[0].getValue();
+            if (null != subject && subject instanceof URI) {
+                indexLinkedDataUri((URI) subject);
+            }
 
-                if (a.length >= 3) {
-                    Value object = a[2].getValue();
-                    if (null != object && object instanceof URI) {
-                        indexLinkedDataUri((URI) object);
-                    }
+            if (a.length >= 3) {
+                Value object = a[2].getValue();
+                if (null != object && object instanceof URI) {
+                    indexLinkedDataUri((URI) object);
                 }
             }
         }
     }
 
     private void indexLinkedDataUri(final URI uri) {
-        if (null != linkedDataCache) {
+        try {
+            linkedDataCacheConnection.begin();
             try {
-                linkedDataCacheConnection.begin();
-                try {
-                    CacheEntry.Status status = linkedDataCache.retrieveUri(uri, linkedDataCacheConnection);
-                    linkedDataCacheConnection.commit();
-                } finally {
-                    linkedDataCacheConnection.rollback();
-                }
-            } catch (RippleException e) {
-                logger.log(Level.SEVERE, "Ripple exception while dereferencing URI " + uri, e);
-            } catch (SailException e) {
-                logger.log(Level.SEVERE, "Sail exception while dereferencing URI " + uri, e);
+                CacheEntry.Status status = linkedDataCache.retrieveUri(uri, linkedDataCacheConnection);
+                linkedDataCacheConnection.commit();
+            } finally {
+                linkedDataCacheConnection.rollback();
             }
+        } catch (RippleException e) {
+            logger.log(Level.SEVERE, "Ripple exception while dereferencing URI " + uri, e);
+        } catch (SailException e) {
+            logger.log(Level.SEVERE, "Sail exception while dereferencing URI " + uri, e);
         }
     }
 
-    private void handleCandidateSolution(final SubscriptionImpl subscripton,
+    private void handleCandidateSolution(final String id,
                                          final VariableBindings<Value> bindings) {
-        Query query = subscripton.getQuery();
+        SubscriptionImpl subscription = subscriptions.get(id);
+        if (null == subscription) {
+            throw new IllegalStateException();
+        }
+
+        Query query = subscription.getQuery();
 
         // After queries are removed from the query index, a few more query answers (from the last added statement,
         // which completed an ASK query, for example) may arrive here and need to be excluded
-        if (!subscripton.isActive()) {
+        if (!subscription.isActive()) {
             return;
         }
 
@@ -385,8 +409,8 @@ public class QueryEngineImpl implements QueryEngine {
         // note: SesameStream's response to an ASK query which evaluates to true is an empty BindingSet
         // A result of false is never produced, as data sources are assumed to be infinite streams
         if (Query.QueryForm.SELECT == form) {
-            if (query.getSequenceModifier().trySolution(solution, subscripton)) {
-                handleSolution(subscripton.getHandler(), solution);
+            if (query.getSequenceModifier().trySolution(solution, subscription)) {
+                handleSolution(subscription.getHandler(), solution);
             }
         } else {
             throw new IllegalStateException("unexpected query form: " + form);

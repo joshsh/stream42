@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Stack;
-import java.util.logging.Logger;
 
 /**
  * An index of partial and complete solutions for a given query

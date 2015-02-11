@@ -20,6 +20,10 @@ public interface QueryEngine {
     /**
      * Adds a new query subscription to this query engine
      *
+     * @param ttl the time-to-live of the generated subscription, in milliseconds.
+     *            If ttl > 0, the query has a finite lifetime and will be automatically unregistered at the end
+     *            of that lifetime.
+     *            Note: the query engine may be configured to reject a ttl which is too high, including 0 (infinite).
      * @param query the query to add
      * @param handler a handler for future query answers
      * @return a subscription for computation of future query answers
@@ -29,7 +33,7 @@ public interface QueryEngine {
      * @throws IOException if there is a problem communicating with this query engine
      * (for example, if there are network operations involved)
      */
-    Subscription addQuery(String query, BindingSetHandler handler)
+    Subscription addQuery(long ttl, String query, BindingSetHandler handler)
             throws IOException, IncompatibleQueryException, InvalidQueryException;
 
     /**

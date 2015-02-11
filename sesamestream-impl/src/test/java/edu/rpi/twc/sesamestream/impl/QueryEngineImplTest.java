@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class QueryEngineImplTest extends QueryEngineTestBase {
+    private static final long QUERY_TTL = 0;
 
     private static final String[] LUBM_QUERIES
             = {"q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q11", "q12", "q13", "q14"};
@@ -70,7 +71,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
             InputStream in = SesameStream.class.getResourceAsStream(name);
             try {
                 String query = IOUtil.readString(in);
-                engine.addQuery(query, bsh);
+                engine.addQuery(QUERY_TTL, query, bsh);
             } finally {
                 in.close();
             }
@@ -94,7 +95,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
             try {
                 String query = IOUtil.readString(in);
                 try {
-                    engine.addQuery(query, bsh);
+                    engine.addQuery(QUERY_TTL, query, bsh);
                 } catch (QueryEngine.InvalidQueryException e) {
                     invalid = true;
                 }
@@ -122,7 +123,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
             try {
                 String query = IOUtil.readString(in);
                 try {
-                    engine.addQuery(query, bsh);
+                    engine.addQuery(QUERY_TTL, query, bsh);
                 } catch (QueryEngine.IncompatibleQueryException e) {
                     incompatible = true;
                 }

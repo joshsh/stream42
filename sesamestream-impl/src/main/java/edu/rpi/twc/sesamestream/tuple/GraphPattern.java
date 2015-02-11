@@ -1,7 +1,5 @@
 package edu.rpi.twc.sesamestream.tuple;
 
-import edu.rpi.twc.sesamestream.Subscription;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,26 +13,28 @@ import java.util.Set;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class GraphPattern<T> {
-    private final Subscription subscription;
+public class GraphPattern<T> implements Comparable<GraphPattern<T>> {
     private final List<TuplePattern<T>> patterns;
     private final QueryVariables variables;
+
+    private String id;
+    private long expirationTime;
 
     private final SolutionIndex<T> solutionIndex;
 
     // a temporary collection used externally for tuple matching
     private final Set<Long> solutionHashes = new HashSet<Long>();
 
-    public GraphPattern(final Subscription subscription,
-                        final List<TuplePattern<T>> patterns) {
+    public GraphPattern(final List<TuplePattern<T>> patterns,
+                        final long expirationTime) {
         if (patterns.size() > 32) {
             // because we create an integer-sized bit field of matched patterns
             throw new IllegalArgumentException(
                     "too many tuple patterns; implementation limit is 32 per graph pattern");
         }
 
-        this.subscription = subscription;
         this.patterns = patterns;
+        this.expirationTime = expirationTime;
 
         int i = 0;
         Set<String> variableSet = new HashSet<String>();
@@ -53,8 +53,12 @@ public class GraphPattern<T> {
         this.solutionIndex = new SolutionIndex<T>(variables, patterns.size());
     }
 
-    public Subscription getSubscription() {
-        return subscription;
+    public String getId() {
+        return id;
+    }
+
+    public void setId(final String id) {
+        this.id = id;
     }
 
     public List<TuplePattern<T>> getPatterns() {
@@ -71,6 +75,22 @@ public class GraphPattern<T> {
 
     public Set<Long> getSolutionHashes() {
         return solutionHashes;
+    }
+
+    public boolean isExpired(final long now) {
+        return expirationTime > 0 && expirationTime < now;
+    }
+
+    public void setExpirationTime(long expirationTime) {
+        this.expirationTime = expirationTime;
+    }
+
+    // order graph patterns by increasing expiration time
+    @Override
+    public int compareTo(GraphPattern<T> other) {
+        return 0 == expirationTime
+                ? 0 == other.expirationTime ? 0 : 1
+                : 0 == other.expirationTime ? -1 : ((Long) expirationTime).compareTo(other.expirationTime);
     }
 
     public static class QueryVariables {

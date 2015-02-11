@@ -1,12 +1,11 @@
 package edu.rpi.twc.sesamestream.tuple;
 
-import edu.rpi.twc.sesamestream.Subscription;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.Stack;
 import java.util.logging.Logger;
@@ -65,7 +64,9 @@ public class QueryIndex<T> {
      * @param graphPattern the pattern to index
      */
     public synchronized void add(final GraphPattern<T> graphPattern) {
-        rootMetadata.add(graphPattern);
+        // generate a unique id for the pattern, and store it with the pattern
+        String id = rootMetadata.add(graphPattern);
+        graphPattern.setId(id);
 
         for (TuplePattern<T> p : graphPattern.getPatterns()) {
             if (rootMetadata.tupleSize != p.getTerms().length) {
@@ -92,6 +93,15 @@ public class QueryIndex<T> {
         }
     }
 
+    public synchronized void renew(final GraphPattern<T> graphPattern, final long ttl, final long now) {
+        // assign a new expiration time to the graph pattern
+        graphPattern.setExpirationTime(0 == ttl ? 0 : now + ttl);
+
+        // re-order the queue of patterns
+        rootMetadata.graphPatterns.remove(graphPattern);
+        rootMetadata.graphPatterns.add(graphPattern);
+    }
+
     /**
      * Consumes a tuple and matches it against any and all applicable graph patterns,
      * possibly producing one or more solutions.
@@ -103,12 +113,11 @@ public class QueryIndex<T> {
      */
     public synchronized boolean match(final Tuple<T> tuple,
                                       final SolutionHandler<T> handler,
-                                      final long ttl) {
+                                      final long ttl,
+                                      final long now) {
         if (rootMetadata.tupleSize != tuple.getElements().length) {
             throw new IllegalArgumentException("tuple is not of expected length " + rootMetadata.tupleSize);
         }
-
-        long now = System.currentTimeMillis();
 
         long expirationTime = ttl > 0 ? now + ttl : 0;
 
@@ -127,22 +136,37 @@ public class QueryIndex<T> {
     }
 
     /**
-     * Enforce tuple time-to-live by removing expired solutions.
-     * This is a space-saving operation which has no effect on query evaluation;
+     * Enforce query and tuple time-to-live by removing expired graph patterns and solutions.
+     * The latter is a space-saving operation which has no effect on query evaluation;
      * it forces all expired solutions to be removed at once, rather than merely becoming irrelevant
      * and being gradually removed upon discovery.
      */
-    public synchronized void removeExpiredSolutions() {
-        long now = System.currentTimeMillis();
+    public synchronized void removeExpired(final long now) {
+        long startTime = System.currentTimeMillis();
+        int removedQueries = 0;
         int removedSolutions = 0;
+
+        Collection<GraphPattern<T>> toRemove = new LinkedList<GraphPattern<T>>();
+        for (GraphPattern<T> gp : rootMetadata.graphPatterns) {
+            if (gp.isExpired(now)) {
+                toRemove.add(gp);
+            }
+        }
+        for (GraphPattern<T> gp : toRemove) {
+            remove(gp);
+            removedQueries++;
+        }
 
         for (GraphPattern<T> gp : rootMetadata.graphPatterns) {
             SolutionIndex<T> index = gp.getSolutionIndex();
             removedSolutions += index.removeExpiredSolutions(now);
         }
 
-        long endTime = System.currentTimeMillis();
-        logger.info("removed " + removedSolutions + " solutions in " + (endTime - now) + "ms");
+        if (removedQueries > 0 || removedSolutions > 0) {
+            long endTime = System.currentTimeMillis();
+            logger.info("removed " + removedQueries + " queries and "
+                    + removedSolutions + " solutions in " + (endTime - startTime) + "ms");
+        }
     }
 
     private void add(final TuplePattern<T> pattern,
@@ -295,7 +319,7 @@ public class QueryIndex<T> {
                     }
                     hashes.add(hash);
 
-                    handler.handle(ts.pattern.getGraphPattern().getSubscription(), ps.getBindings());
+                    handler.handle(ts.pattern.getGraphPattern().getId(), ps.getBindings());
                 }
 
                 solutionIndex.add(ps, now);
@@ -309,7 +333,7 @@ public class QueryIndex<T> {
      * A handler for candidate solutions.  These potentially become SPARQL solutions after filtering and projection.
      */
     public static interface SolutionHandler<T> {
-        void handle(Subscription subscription, VariableBindings<T> bindings);
+        void handle(String id, VariableBindings<T> bindings);
     }
 
     private static class TuplePatternSolutions<T> {
@@ -319,9 +343,10 @@ public class QueryIndex<T> {
 
     private static class RootMetadata<T> {
         private final int tupleSize;
-        private final Set<GraphPattern<T>> graphPatterns = new HashSet<GraphPattern<T>>();
+        private final PriorityQueue<GraphPattern<T>> graphPatterns = new PriorityQueue<GraphPattern<T>>();
         private final Collection<TuplePatternSolutions<T>> tpSolutions = new LinkedList<TuplePatternSolutions<T>>();
         private final Stack<Solution<T>> helperStack = new Stack<Solution<T>>();
+        private int patternCount = 0;
 
         private RootMetadata(final int tupleSize) {
             this.tupleSize = tupleSize;
@@ -337,12 +362,13 @@ public class QueryIndex<T> {
             helperStack.clear();
         }
 
-        public void add(final GraphPattern<T> graphPattern) {
+        public String add(final GraphPattern<T> graphPattern) {
             graphPatterns.add(graphPattern);
+            return "gp" + (++patternCount);
         }
 
         public boolean remove(final GraphPattern<T> graphPattern) {
-            return null != graphPatterns && graphPatterns.remove(graphPattern);
+            return graphPatterns.remove(graphPattern);
         }
     }
 }

@@ -1,8 +1,8 @@
 package edu.rpi.twc.sesamestream.tuple;
 
 /**
-* @author Joshua Shinavier (http://fortytwo.net)
-*/
+ * @author Joshua Shinavier (http://fortytwo.net)
+ */
 public class Tuple<T> {
     private final T[] elements;
 
