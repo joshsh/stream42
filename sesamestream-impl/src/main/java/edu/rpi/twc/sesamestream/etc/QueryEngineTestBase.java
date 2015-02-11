@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ * A base class for unit tests, included here for ease of use in downstream projects.
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class QueryEngineTestBase {
@@ -44,13 +46,6 @@ public class QueryEngineTestBase {
     protected Sail sail;
     protected QueryEngineImpl queryEngine;
     protected ValueFactory vf = new ValueFactoryImpl();
-
-    protected String ex = "http://example.org/";
-    protected String foaf = "http://xmlns.com/foaf/0.1/";
-    protected URI arthur = vf.createURI(ex + "arthur");
-    protected URI zaphod = vf.createURI(ex + "zaphod");
-    protected URI ford = vf.createURI(ex + "ford");
-    protected URI knows = vf.createURI(foaf + "knows");
 
     protected BindingSetHandler simpleBindingSetHandler = new BindingSetHandler() {
         public void handle(final BindingSet result) {

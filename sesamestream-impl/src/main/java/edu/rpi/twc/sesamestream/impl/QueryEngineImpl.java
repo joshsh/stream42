@@ -4,6 +4,12 @@ import edu.rpi.twc.sesamestream.BindingSetHandler;
 import edu.rpi.twc.sesamestream.QueryEngine;
 import edu.rpi.twc.sesamestream.SesameStream;
 import edu.rpi.twc.sesamestream.Subscription;
+import edu.rpi.twc.sesamestream.tuple.GraphPattern;
+import edu.rpi.twc.sesamestream.tuple.QueryIndex;
+import edu.rpi.twc.sesamestream.tuple.Term;
+import edu.rpi.twc.sesamestream.tuple.Tuple;
+import edu.rpi.twc.sesamestream.tuple.TuplePattern;
+import edu.rpi.twc.sesamestream.tuple.VariableBindings;
 import net.fortytwo.linkeddata.CacheEntry;
 import net.fortytwo.linkeddata.LinkedDataCache;
 import net.fortytwo.ripple.RippleException;
@@ -12,7 +18,6 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
-import org.openrdf.query.Binding;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
@@ -33,7 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -58,10 +63,13 @@ import java.util.logging.Logger;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class QueryEngineImpl implements QueryEngine {
-    private static final Logger LOGGER = Logger.getLogger(QueryEngineImpl.class.getName());
+    private static final Logger logger = Logger.getLogger(QueryEngineImpl.class.getName());
 
-    //private final Map<TriplePattern, Collection<PartialSolution>> oldIndex;
+    // TODO: index and queryIndex are redundant/alternatives; the latter should make the former obsolete
     private final TripleIndex index;
+    private final QueryIndex<Value> queryIndex;
+
+    private final QueryIndex.SolutionHandler<Value> solutionHandler;
 
     private final List<PartialSolution> intermediateSolutionBuffer = new LinkedList<PartialSolution>();
 
@@ -92,7 +100,8 @@ public class QueryEngineImpl implements QueryEngine {
 
     public enum Quantity {
         Queries, Statements, TriplePatterns, PartialSolutions, Solutions,
-        IndexingOperations, BindingOperations, ReplacementOperations}
+        IndexingOperations, BindingOperations, ReplacementOperations
+    }
 
     private final Map<Quantity, Counter> counters;
 
@@ -113,6 +122,7 @@ public class QueryEngineImpl implements QueryEngine {
      */
     public QueryEngineImpl() {
         index = new TripleIndex();
+        queryIndex = new QueryIndex<Value>(3);  // TODO: support quads
         uniquePatterns = new HashMap<TriplePattern, TriplePattern>();
         deduplicator = new TriplePatternDeduplicator();
 
@@ -128,6 +138,14 @@ public class QueryEngineImpl implements QueryEngine {
         counters.put(Quantity.IndexingOperations, countIndexOps);
         counters.put(Quantity.BindingOperations, countBindingOps);
         counters.put(Quantity.ReplacementOperations, countReplaceOps);
+
+        solutionHandler = new QueryIndex.SolutionHandler<Value>() {
+            @Override
+            public void handle(final Subscription sub, final VariableBindings<Value> bindings) {
+                //((SubscriptionImpl) sub).getHandler().handle(fromNative(bindings));
+                handleCandidateSolution((SubscriptionImpl) sub, bindings);
+            }
+        };
 
         clear();
     }
@@ -175,7 +193,10 @@ public class QueryEngineImpl implements QueryEngine {
     }
 
     public void clear() {
+        // TODO: redundant/alternatives
         index.clear();
+        queryIndex.clear();
+
         uniquePatterns.clear();
 
         countQueries.reset();
@@ -218,7 +239,7 @@ public class QueryEngineImpl implements QueryEngine {
      */
     public Subscription addQuery(final TupleExpr t,
                                  final BindingSetHandler h) throws IncompatibleQueryException {
-        mutexUp();
+        //mutexUp();
 
         increment(countQueries, true);
         timeCurrentOperationBegan = System.currentTimeMillis();
@@ -228,37 +249,58 @@ public class QueryEngineImpl implements QueryEngine {
 
         SubscriptionImpl s = new SubscriptionImpl(q, h);
 
-        PartialSolution query = new PartialSolution(s);
-        addPartialSolution(query);
-        flushPartialSolutions();
+        GraphPattern<Value> graphPattern = toNative(s, q);
+        queryIndex.add(graphPattern);
+
+        for (TuplePattern<Value> p : graphPattern.getPatterns()) {
+            triggerLinkedDataCache(p);
+        }
+
+        // TODO: redundant/alternative
+        //PartialSolution query = new PartialSolution(s);
+        //addPartialSolution(query);
+
+        //flushPartialSolutions();
 
         logEntry();
 
-        mutexDown();
+        //mutexDown();
 
         return s;
     }
 
     public void addStatement(final Statement s) {
+        /*
         if (mutex) {
             //System.out.println("queueing statement: " + s);
             statementBuffer.add(s);
         } else {
-            mutexUp();
-            //System.out.println("adding statement: " + s);
+        */
+        //    mutexUp();
+        //System.out.println("adding statement: " + s);
 
-            increment(countStatements, false);
-            timeCurrentOperationBegan = System.currentTimeMillis();
-            //System.out.println("statement:\t" + s);
+        increment(countStatements, false);
+        timeCurrentOperationBegan = System.currentTimeMillis();
+        //System.out.println("statement:\t" + s);
 
-            index.match(toVarList(s), s, binder);
+        // TODO: redundant/alternatives
+        //index.match(toVarList(s), s, binder);
+        Tuple<Value> tuple = toNative(s);
+        boolean matched = queryIndex.match(tuple, solutionHandler);
 
-            flushPartialSolutions();
+        // cue the Linked Data cache to dereference the subject and object URIs of the statement,
+        // but only if at least one pattern in the index has matched the tuple
+        if (matched) {
+            triggerLinkedDataCache(tuple);
+        }
 
-            logEntry();
+        //flushPartialSolutions();
 
+        logEntry();
+/*
             mutexDown();
         }
+        */
     }
 
     public void addStatements(final Statement... statements) {
@@ -285,6 +327,44 @@ public class QueryEngineImpl implements QueryEngine {
         if (statementBuffer.size() > 0) {
             addStatement(statementBuffer.remove(0));
         }
+    }
+
+    private Tuple<Value> toNative(final Statement s) {
+        // note: assumes tupleSize==3
+        return new Tuple<Value>(new Value[]{s.getSubject(), s.getPredicate(), s.getObject()});
+    }
+
+    private GraphPattern<Value> toNative(final Subscription s, final Query q) {
+        List<TuplePattern<Value>> patterns = new LinkedList<TuplePattern<Value>>();
+        LList<TriplePattern> tPatterns = q.getGraphPattern();
+        while (!tPatterns.isNil()) {
+            TriplePattern tp = tPatterns.getValue();
+
+            // note: assumes tupleSize==3
+            Term<Value>[] parts = new Term[]{
+                    toNative(tp.getSubject()), toNative(tp.getPredicate()), toNative(tp.getObject())};
+            TuplePattern<Value> sp = new TuplePattern<Value>(parts);
+            patterns.add(sp);
+
+            tPatterns = tPatterns.getRest();
+        }
+
+        return new GraphPattern<Value>(s, patterns);
+    }
+
+    private Term<Value> toNative(final Var v) {
+        return v.hasValue()
+                ? new Term<Value>(v.getValue(), null)
+                : new Term<Value>(null, v.getName());
+    }
+
+    private BindingSet fromNative(final Map<String, Value> bindings) {
+        MapBindingSet bs = new MapBindingSet();
+        for (Map.Entry<String, Value> e : bindings.entrySet()) {
+            bs.addBinding(e.getKey(), e.getValue());
+        }
+
+        return bs;
     }
 
     private void addPartialSolution(final PartialSolution ps) {
@@ -322,6 +402,64 @@ public class QueryEngineImpl implements QueryEngine {
         return l;
     }
 
+    private void triggerLinkedDataCache(final Tuple<Value> tuple) {
+        if (null != linkedDataCache) {
+            Value[] a = tuple.getElements();
+            if (a.length >= 1) {
+                Value subject = a[0];
+                if (subject instanceof URI) {
+                    indexLinkedDataUri((URI) subject);
+                }
+
+                if (a.length >= 3) {
+                    Value object = a[2];
+                    if (object instanceof URI) {
+                        indexLinkedDataUri((URI) object);
+                    }
+                }
+            }
+        }
+    }
+
+    private void triggerLinkedDataCache(final TuplePattern<Value> pattern) {
+        if (null != linkedDataCache) {
+            Term<Value>[] a = pattern.getTerms();
+            if (a.length >= 1) {
+                Value subject = a[0].getValue();
+                if (null != subject && subject instanceof URI) {
+                    indexLinkedDataUri((URI) subject);
+                }
+
+                if (a.length >= 3) {
+                    Value object = a[2].getValue();
+                    if (null != object && object instanceof URI) {
+                        indexLinkedDataUri((URI) object);
+                    }
+                }
+            }
+        }
+    }
+
+    private void indexLinkedDataUri(final URI uri) {
+        if (null != linkedDataCache) {
+            try {
+                // TODO: pipe the retrieved statements into the query engine
+
+                linkedDataCacheConnection.begin();
+                try {
+                    CacheEntry.Status status = linkedDataCache.retrieveUri(uri, linkedDataCacheConnection);
+                    linkedDataCacheConnection.commit();
+                } finally {
+                    linkedDataCacheConnection.rollback();
+                }
+            } catch (RippleException e) {
+                logger.log(Level.SEVERE, "Ripple exception while dereferencing URI " + uri, e);
+            } catch (SailException e) {
+                logger.log(Level.SEVERE, "Sail exception while dereferencing URI " + uri, e);
+            }
+        }
+    }
+
     private void indexTriplePattern(final TriplePattern p,
                                     final PartialSolution q) {
         increment(countIndexOps, false);
@@ -354,10 +492,10 @@ public class QueryEngineImpl implements QueryEngine {
                     linkedDataCacheConnection.rollback();
                 }
             } catch (RippleException e) {
-                LOGGER.severe(e.getMessage());
+                logger.severe(e.getMessage());
                 e.printStackTrace();
             } catch (SailException e) {
-                LOGGER.severe(e.getMessage());
+                logger.severe(e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -366,21 +504,17 @@ public class QueryEngineImpl implements QueryEngine {
     private void handleSolution(final PartialSolution ps,
                                 final TriplePattern matched,
                                 final VarList newBindings) {
-        //System.out.println("triple pattern satisfied: " + satisfiedPattern + " with bindings " + newBindings);
-
         // if a partial solution has only one triple pattern, and an incoming statement has just matched against it,
         // then a query solution has just been found
         // TODO: optimize this length = 1 check
         if (1 == ps.getGraphPattern().length()) {
-            //System.out.println("producing solution: " + newBindings);
-            produceSolution(ps, VarList.union(newBindings, ps.getBindings()));
+            handleCandidateSolution(ps, VarList.union(newBindings, ps.getBindings()));
         }
 
         // if there is more than one triple pattern in the partial solution, then the remaining patterns still
         // need to be matched by other statements before we have a complete solution.  Create and index a new partial
         // solution which adds the new bindings and subtracts the already-matched triple pattern.
         else {
-            //System.out.println("creating new partial solution");
             LList<TriplePattern> nextPatterns = LList.NIL;
 
             VarList nextBindings = VarList.union(newBindings, ps.getBindings());
@@ -407,8 +541,8 @@ public class QueryEngineImpl implements QueryEngine {
     }
 
     // Note: this operation doesn't need to be counted; it happens exactly once for each solution (which are counted)
-    private void produceSolution(final PartialSolution r,
-                                 final VarList nextBindings) {
+    private void handleCandidateSolution(final PartialSolution r,
+                                         final VarList nextBindings) {
         Query q = r.getSubscription().getQuery();
 
         // Since queries are not yet unregistered in the TripleIndex, inactive subscriptions will be encountered
@@ -427,7 +561,7 @@ public class QueryEngineImpl implements QueryEngine {
         } else {
             // this BindingSet may contain non-selected and pre-projected variables, suitable
             // for filtering, but not yet a final query result
-            BindingSet bs = toFilterableBindingSet(nextBindings);
+            BindingSet bs = toBindingSet(nextBindings);
 
             // apply all filters, discarding this BindingSet if any filter rejects it
             for (Filter f : filters) {
@@ -436,7 +570,7 @@ public class QueryEngineImpl implements QueryEngine {
                         return;
                     }
                 } catch (QueryEvaluationException e) {
-                    LOGGER.severe("query evaluation error while applying filter");
+                    logger.severe("query evaluation error while applying filter");
                     e.printStackTrace(System.err);
                     return;
                 }
@@ -449,8 +583,8 @@ public class QueryEngineImpl implements QueryEngine {
 
         // adding constants after filter application assumes that one will never filter on constants
         if (null != q.getConstants()) {
-            for (Binding b : q.getConstants()) {
-                solution.addBinding(b);
+            for (Map.Entry<String, Value> e : q.getConstants().entrySet()) {
+                solution.addBinding(e.getKey(), e.getValue());
             }
         }
 
@@ -467,7 +601,76 @@ public class QueryEngineImpl implements QueryEngine {
         }
     }
 
-    private BindingSet toFilterableBindingSet(final VarList bindings) {
+    // TODO: counting...
+    // Note: this operation doesn't need to be counted; it happens exactly once for each solution (which are counted)
+    private void handleCandidateSolution(final SubscriptionImpl subscripton,
+                                         final VariableBindings<Value> bindings) {
+        Query query = subscripton.getQuery();
+
+        // After queries are removed from the query index, a few more query answers (from the last added statement,
+        // which completed an ASK query, for example) may arrive here and need to be excluded
+        if (!subscripton.isActive()) {
+            return;
+        }
+
+        List<Filter> filters = query.getFilters();
+
+        // this BindingSet may contain non-selected and pre-projected variables, suitable
+        // for filtering, but not yet a final query result
+        BindingSet bs = toBindingSet(bindings);
+
+        // apply all filters, discarding this potential solution if any filter rejects it
+        if (null != filters) {
+            for (Filter f : filters) {
+                try {
+                    if (!filterEvaluator.applyFilter(f, bs)) {
+                        return;
+                    }
+                } catch (QueryEvaluationException e) {
+                    logger.log(Level.SEVERE, "query evaluation error while applying filter", e);
+                    return;
+                }
+            }
+        }
+
+        MapBindingSet solution = new MapBindingSet();
+
+        // remove non-selected variables and project the final names of the selected variables
+        for (String key : query.getBindingNames()) {
+            Value value = bindings.get(key);
+            //if (null == value && (null == query.getConstants() || !query.getConstants().keySet().contains(key))) {
+            //    throw new IllegalStateException("no value for variable " + key);
+            //}
+            if (null != query.getExtendedBindingNames()) {
+                String keyp = query.getExtendedBindingNames().get(key);
+                if (null != keyp) {
+                    key = keyp;
+                }
+            }
+            solution.addBinding(key, value);
+        }
+
+        // adding constants after filter application assumes that one will never filter on constants
+        if (null != query.getConstants()) {
+            for (Map.Entry<String, Value> e : query.getConstants().entrySet()) {
+                solution.addBinding(e.getKey(), e.getValue());
+            }
+        }
+
+        Query.QueryForm form = query.getQueryForm();
+
+        // note: SesameStream's response to an ASK query which evaluates to true is an empty BindingSet
+        // A result of false is never produced, as data sources are assumed to be infinite streams
+        if (Query.QueryForm.SELECT == form) {
+            if (query.getSequenceModifier().trySolution(solution, subscripton)) {
+                handleSolution(subscripton.getHandler(), solution);
+            }
+        } else {
+            throw new IllegalStateException("unexpected query form: " + form);
+        }
+    }
+
+    private BindingSet toBindingSet(final VarList bindings) {
 
         MapBindingSet bs = new MapBindingSet();
         VarList cur = bindings;
@@ -480,17 +683,27 @@ public class QueryEngineImpl implements QueryEngine {
         return bs;
     }
 
+    private BindingSet toBindingSet(final VariableBindings<Value> bindings) {
+
+        MapBindingSet bs = new MapBindingSet();
+        for (Map.Entry<String, Value> e : bindings.entrySet()) {
+            bs.addBinding(e.getKey(), e.getValue());
+        }
+
+        return bs;
+    }
+
     private MapBindingSet toSolutionBindings(final BindingSet bs,
                                              final PartialSolution r) {
         MapBindingSet newBindings = new MapBindingSet();
 
-        Set<String> names = r.getSubscription().getQuery().getBindingNames();
+        Collection<String> names = r.getSubscription().getQuery().getBindingNames();
         Map<String, String> extNames = r.getSubscription().getQuery().getExtendedBindingNames();
 
         for (String name : names) {
             Value val = bs.getValue(name);
             if (null == val) {
-                LOGGER.warning("no value bound to variable '" + name + "' in solution");
+                logger.warning("no value bound to variable '" + name + "' in solution");
                 continue;
             }
 
@@ -516,7 +729,7 @@ public class QueryEngineImpl implements QueryEngine {
                                              final PartialSolution r) {
         MapBindingSet newBindings = new MapBindingSet();
 
-        Set<String> names = r.getSubscription().getQuery().getBindingNames();
+        Collection<String> names = r.getSubscription().getQuery().getBindingNames();
         Map<String, String> extNames = r.getSubscription().getQuery().getExtendedBindingNames();
 
         VarList cur = bindings;
@@ -634,6 +847,7 @@ public class QueryEngineImpl implements QueryEngine {
     private void handleSolution(final BindingSetHandler handler,
                                 final BindingSet solution) {
         increment(countSolutions, true);
+
         if (SesameStream.getDoPerformanceMetrics()) {
             System.out.println("SOLUTION\t" + System.currentTimeMillis() + "\t"
                     + QueryEngineImpl.toString(solution));

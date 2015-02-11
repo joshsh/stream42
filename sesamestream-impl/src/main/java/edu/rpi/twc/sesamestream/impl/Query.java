@@ -1,7 +1,7 @@
 package edu.rpi.twc.sesamestream.impl;
 
 import edu.rpi.twc.sesamestream.QueryEngine;
-import org.openrdf.query.Binding;
+import org.openrdf.model.Value;
 import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Distinct;
 import org.openrdf.query.algebra.Exists;
@@ -23,11 +23,11 @@ import org.openrdf.query.algebra.ValueConstant;
 import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.algebra.helpers.TupleExprs;
-import org.openrdf.query.impl.BindingImpl;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -40,13 +40,15 @@ import java.util.logging.Logger;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class Query {
-    private static final Logger LOGGER = Logger.getLogger(Query.class.getName());
+    private static final Logger logger = Logger.getLogger(Query.class.getName());
 
-    private final Set<String> bindingNames;
+    // note: preserves order of variables for the sake of ordering solution bindings accordingly
+    private final LinkedHashSet<String> bindingNames;
+
     private Map<String, String> extendedBindingNames;
     private LList<TriplePattern> graphPattern;
     private List<Filter> filters;
-    private Set<Binding> constants;
+    private Map<String, Value> constants;
     //private Map<String,>
 
     private final SolutionSequenceModifier sequenceModifier = new SolutionSequenceModifier();
@@ -64,7 +66,7 @@ public class Query {
                  final QueryEngineImpl.TriplePatternDeduplicator deduplicator)
             throws QueryEngine.IncompatibleQueryException {
 
-        bindingNames = new HashSet<String>();
+        bindingNames = new LinkedHashSet<String>();
 
         graphPattern = LList.NIL;
 
@@ -104,7 +106,7 @@ public class Query {
      * @return any predefined bindings which are to be added to query solutions.
      *         For example, CONSTRUCT queries may bind constants to the subject, predicate, or object variable
      */
-    public Set<Binding> getConstants() {
+    public Map<String, Value> getConstants() {
         return constants;
     }
 
@@ -144,7 +146,11 @@ public class Query {
         return graphPattern;
     }
 
-    public Set<String> getBindingNames() {
+    /**
+     * Gets the order-preserving list of variable names
+     * @return
+     */
+    public Collection<String> getBindingNames() {
         return bindingNames;
     }
 
@@ -351,9 +357,9 @@ public class Query {
 
                     ValueConstant vc = (ValueConstant) ve;
                     if (null == constants) {
-                        constants = new HashSet<Binding>();
+                        constants = new HashMap<String, Value>();
                     }
-                    constants.add(new BindingImpl(target, vc.getValue()));
+                    constants.put(target, vc.getValue());
                 } else if (ve instanceof Var) {
                     // do nothing; the source-->target mapping is already in the extended binding names
                 } else {

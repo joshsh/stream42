@@ -9,8 +9,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.openrdf.model.Statement;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.model.URI;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.TupleExpr;
@@ -37,7 +36,12 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
 
     private static final String[] INCOMPATIBLE_QUERIES = {"not-equal-filters"};
 
-    private ValueFactory valueFactory = new ValueFactoryImpl();
+    protected String ex = "http://example.org/";
+    protected String foaf = "http://xmlns.com/foaf/0.1/";
+    protected URI arthur = vf.createURI(ex + "arthur");
+    protected URI zaphod = vf.createURI(ex + "zaphod");
+    protected URI ford = vf.createURI(ex + "ford");
+    protected URI knows = vf.createURI(foaf + "knows");
 
     @Before
     public void setUp() throws Exception {
@@ -68,7 +72,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
             try {
                 String query = IOUtil.readString(in);
                 engine.addQuery(query, bsh);
-            }   finally {
+            } finally {
                 in.close();
             }
         }
@@ -96,7 +100,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
                     invalid = true;
                 }
                 assertTrue(invalid);
-            }   finally {
+            } finally {
                 in.close();
             }
         }
@@ -124,39 +128,11 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
                     incompatible = true;
                 }
                 assertTrue(incompatible);
-            }   finally {
+            } finally {
                 in.close();
             }
         }
     }
-
-    /*
-    @Test
-    public void testManually() throws Exception {
-        TupleExpr q = loadQuery("simple-join-in.rq");
-
-        System.out.println("########## a");
-
-        queryEngine.printIndex();
-
-        System.out.println("########## s");
-
-        queryEngine.addQuery(q, simpleBindingSetHandler);
-        queryEngine.printIndex();
-
-        System.out.println("########## d");
-
-        queryEngine.addStatement(vf.createStatement(arthur, knows, zaphod));
-        queryEngine.printIndex();
-
-        System.out.println("########## f");
-
-        queryEngine.addStatement(vf.createStatement(zaphod, knows, ford));
-        queryEngine.printIndex();
-
-        System.out.println("########## g");
-    }
-    */
 
     @Test
     public void testSimple() throws Exception {
@@ -214,13 +190,41 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
 
     @Test
     public void testDistinct() throws Exception {
-        Collection<BindingSet> answers = continuousQueryAnswers(
+        Collection<BindingSet> answers;
+
+        answers = distinctContinuousQueryAnswers(
+                loadData("example.nq"), loadQuery("exponential-join-all-nodistinct.rq"))[0];
+        assertTrue(answers.size() >= 14);
+        /*
+        System.out.println("continuous:");
+        for (BindingSet bs : answers) {
+            System.out.println("\t" + bs);
+        }
+        */
+
+        // There is no simple relationship between SesameStream's and MemoryStore's answers in the presence of loops.
+        // SesameStream finds additional correct answers not produced by MemoryStore, but MemoryStore finds additional
+        // answers in which statements are matched by more than one triple pattern.
+        // SesameStream produces some such "pathological" answers as a by-product of query evaluation, but it does
+        // not attempt to produce a complete set of such answers.
+        answers = distinctStaticQueryAnswers(
+                loadData("example.nq"), loadQuery("exponential-join-all-nodistinct.rq"))[0];
+        assertTrue(answers.size() >= 14);
+      /*
+        System.out.println("static:");
+        for (BindingSet bs : answers) {
+            System.out.println("\t" + bs);
+        }
+        */
+
+        answers = continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("exponential-join-nodistinct.rq"), false);
-        assertTrue(answers.size() > 9);
+        assertTrue(answers.size() >= 14);
 
         answers = continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("exponential-join-distinct.rq"), false);
-        assertEquals(9, answers.size());
+        // note: the number of distinct "non-pathological" solutions is 9
+        assertEquals(11, answers.size());
     }
 
     @Test
@@ -237,7 +241,8 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
             int reduced = continuousQueryAnswers(
                     loadData("example.nq"), loadQuery("exponential-join-reduced.rq"), false).size();
 
-            assertTrue(reduced < raw);
+            assertTrue(reduced <= raw);
+
             assertTrue(reduced > distinct);
         } finally {
             SesameStream.setReducedModifierCapacity(overflow);
@@ -245,7 +250,14 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
     }
 
     @Test
-    public void testCircleJoin() throws Exception {
+    public void testCircleJoins() throws Exception {
+        // TODO: add files
+//        compareAnswers(
+//                loadData("example.nq"),
+//                loadQuery("simple-cycle.rq"));
+        compareAnswers(
+                loadData("simple-cycle.nq"),
+                loadQuery("circle-join.rq"));
         compareAnswers(
                 loadData("example.nq"),
                 loadQuery("circle-join.rq"));
@@ -340,7 +352,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
         assertTrue(answers.size() >= 5);
         for (BindingSet b : answers) {
             assertNotNull(b.getValue("subject"));
-            assertEquals(valueFactory.createURI("http://xmlns.com/foaf/0.1/name"), b.getValue("predicate"));
+            assertEquals(vf.createURI("http://xmlns.com/foaf/0.1/name"), b.getValue("predicate"));
             assertNotNull(b.getValue("object"));
         }
     }
@@ -351,6 +363,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
                 loadData("example.nq"), loadQuery("describe.rq"), false);
     }
 
+    /* TODO: remove or re-evaluate; partial solutions are no longer counted
     @Test
     public void testIrrelevantStatementsAreNotIndexed() throws Exception {
 
@@ -372,6 +385,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
         queryEngine.addStatement(vf.createStatement(ford, knows, arthur));
         assertEquals(3, countPartialSolutions());
     }
+    */
 
     /*
     @Test
@@ -381,6 +395,32 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
                 loadQuery("extendo-gestures.rq"));
     }
     */
+
+    @Test
+    public void testQueryTime() throws Exception {
+        Collection<BindingSet> answers;
+
+        long startTime, endTime;
+        startTime = System.currentTimeMillis();
+        for (int i = 0; i < 1000; i++) {
+            answers = distinctStaticQueryAnswers(
+                    loadData("example.nq"), loadQuery("exponential-join-nodistinct.rq"))[0];
+            //assertEquals(13, answers.size());
+        }
+        endTime = System.currentTimeMillis();
+        System.out.println("MemoryStore query time: " + (endTime - startTime));
+
+        startTime = System.currentTimeMillis();
+        for (int i = 0; i < 1000; i++) {
+            answers = continuousQueryAnswers(
+                    loadData("example.nq"), loadQuery("exponential-join-nodistinct.rq"), false);
+            //assertEquals(9, answers.size());
+            //assertTrue(answers.size() > 13);
+        }
+        endTime = System.currentTimeMillis();
+        System.out.println("SesameStream query time: " + (endTime - startTime));
+
+    }
 
     @Test(expected = QueryEngine.IncompatibleQueryException.class)
     public void testNotExistsUnsupported() throws Exception {

@@ -10,8 +10,9 @@ import java.util.Collection;
 public class LList<T> {
     public static LList NIL = new LList();
 
-    private final T value;
-    private final LList<T> rest;
+    private T value;
+
+    private LList<T> rest;
 
     private LList() {
         this.value = null;
@@ -52,8 +53,16 @@ public class LList<T> {
         return value;
     }
 
+    public void setValue(T value) {
+        this.value = value;
+    }
+
     public LList<T> getRest() {
         return rest;
+    }
+
+    public void setRest(LList<T> rest) {
+        this.rest = rest;
     }
 
     public LList<T> push(final T t) {

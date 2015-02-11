@@ -1,0 +1,3 @@
+<http://example.org/arthur> <http://xmlns.com/foaf/0.1/knows> <http://example.org/zaphod> .
+<http://example.org/ford> <http://xmlns.com/foaf/0.1/knows> <http://example.org/arthur> .
+<http://example.org/zaphod> <http://xmlns.com/foaf/0.1/knows> <http://example.org/ford> .
