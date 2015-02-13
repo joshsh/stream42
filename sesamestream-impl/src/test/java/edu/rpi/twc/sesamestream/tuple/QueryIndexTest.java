@@ -177,7 +177,7 @@ public class QueryIndexTest {
         patterns = new LinkedList<Term<String>[]>();
         patterns.add(pattern1);
         patterns.add(pattern2);
-        query2 = new Query<String>(patterns, 60);
+        query2 = new Query<String>(patterns, now + 1000L * 60);
         queryIndex.add(query2);
 
         pattern1 = new Term[]{
@@ -190,7 +190,7 @@ public class QueryIndexTest {
         patterns.add(pattern1);
         patterns.add(pattern2);
         patterns.add(pattern3);
-        query3 = new Query<String>(patterns, 120);
+        query3 = new Query<String>(patterns, now + 1000L * 120);
         queryIndex.add(query3);
 
         queryIndex.removeExpired(now);
@@ -225,7 +225,7 @@ public class QueryIndexTest {
         map.put("pop", "dozens of millions");
         assertSolutions(now, query3.getVariables(), tuple, map);
 
-        now += 61;
+        now += 1000L * 61;
         queryIndex.removeExpired(now);
 
         // just re-insert one tuple to trigger a solution
@@ -250,7 +250,7 @@ public class QueryIndexTest {
         map.put("pop", "dozens of millions");
         assertSolutions(now, query3.getVariables(), tuple, map);
 
-        now += 61;
+        now += 1000L * 61;
         queryIndex.removeExpired(now);
 
         tuple = new String[]{"zaphod", "knows", "trillian"};

@@ -77,7 +77,7 @@ public class SolutionGroupTest {
     }
 
     @Test
-    public void cantAddExpired() throws Exception {
+    public void testCantAddExpired() throws Exception {
         Solution<String> solExp1 = new Solution<String>(3, 0, bindings, 42);
 
         SolutionGroup<String> g = new SolutionGroup<String>(bindings);
@@ -86,18 +86,18 @@ public class SolutionGroupTest {
     }
 
     @Test
-    public void testRemoveExpired() throws  Exception {
+    public void testRemoveExpired() throws Exception {
         now = 42;
 
-        Solution<String> solExp1 = new Solution<String>(5, 0, bindings, now + 10);
-        Solution<String> solExp2 = new Solution<String>(new Solution<String>(5, 1, bindings, now + 5), 2);
+        Solution<String> solExp1 = new Solution<String>(5, 0, bindings, now + 1000L * 10);
+        Solution<String> solExp2 = new Solution<String>(new Solution<String>(5, 1, bindings, now + 1000L * 5), 2);
         Solution<String> solNonExp1 = new Solution<String>(new Solution<String>(5, 4, bindings, 0), 1);
         Solution<String> solNonExp2 = new Solution<String>(new Solution<String>(5, 3, bindings, 0), 1);
         // this solution inherits the short lifetime of its second component solution,
         // rather than the unlimited lifetime of the first
         Solution<String> solExp3 = new Solution<String>(5,
                 new Solution<String>(5, 3, bindings, 0),
-                new Solution<String>(5, 4, bindings, now + 20));
+                new Solution<String>(5, 4, bindings, now + 1000L * 20));
 
         SolutionGroup<String> g = new SolutionGroup<String>(bindings);
         g.add(solExp1, now);
@@ -110,16 +110,138 @@ public class SolutionGroupTest {
         g.removeExpired(now);
         assertEquals(5, g.getSolutions().length());
 
-        now += 6;
+        now += 1000L * 6;
         g.removeExpired(now);
         assertEquals(4, g.getSolutions().length());
 
-        now += 5;
+        now += 1000L * 5;
         g.removeExpired(now);
         assertEquals(3, g.getSolutions().length());
 
-        now += 10;
+        now += 1000L * 10;
         g.removeExpired(now);
         assertEquals(2, g.getSolutions().length());
+    }
+
+    @Test
+    public void testExpirationLogicOnInsertion() throws Exception {
+        SolutionGroup<String> g = new SolutionGroup<String>(bindings);
+        Solution<String> sol1;
+
+        now = 42;
+
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, now + 1000L * 10), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+
+        // adding an identical solution has no effect
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, now + 1000L * 10), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+
+        // adding an equal solution with a lesser expiration time also has no effect
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, now + 1000L * 5), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+
+        // adding an equal solution with a greater expiration time causes the time to be replaced
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, now + 1000L * 20), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 20, g.getSolutions().getValue().expirationTime);
+
+        // likewise for infinite expiration time
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, 0), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(0, g.getSolutions().getValue().expirationTime);
+
+        // adding a solution contained within an existing solution has no effect if expiration is equal
+        sol1 = new Solution<String>(5, 0, bindings, 0);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(0, g.getSolutions().getValue().expirationTime);
+
+        // likewise if the expiration of the contained solution is lower
+        sol1 = new Solution<String>(5, 0, bindings, now + 1000L * 10);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(0, g.getSolutions().getValue().expirationTime);
+
+        // if the expiration of the contained solution is higher, it must be added as a separate solution
+        g = new SolutionGroup<String>(bindings);
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, now + 1000L * 10), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+        sol1 = new Solution<String>(5, 0, bindings, now + 1000L * 20);
+        g.add(sol1, now);
+        assertEquals(2, g.getSolutions().length());
+        assertEquals(4, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 20, g.getSolutions().getValue().expirationTime);
+
+        // a new solution which contains an old solution replaces it if expiration is equal
+        g = new SolutionGroup<String>(bindings);
+        sol1 = new Solution<String>(5, 0, bindings, now + 1000L * 10);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(4, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, now + 1000L * 10), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+
+        // likewise if the expiration of the new solution is higher...
+        g = new SolutionGroup<String>(bindings);
+        sol1 = new Solution<String>(5, 0, bindings, now + 1000L * 10);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(4, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, now + 1000L * 20), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 20, g.getSolutions().getValue().expirationTime);
+
+        // ...or infinite
+        g = new SolutionGroup<String>(bindings);
+        sol1 = new Solution<String>(5, 0, bindings, now + 1000L * 10);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(4, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, 0), 1);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(0, g.getSolutions().getValue().expirationTime);
+
+        // a new solution which contains an old one but has a lower expiration time is added as a separate solution
+        g = new SolutionGroup<String>(bindings);
+        sol1 = new Solution<String>(5, 0, bindings, now + 1000L * 10);
+        g.add(sol1, now);
+        assertEquals(1, g.getSolutions().length());
+        assertEquals(4, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 10, g.getSolutions().getValue().expirationTime);
+        sol1 = new Solution<String>(new Solution<String>(5, 0, bindings, now + 1000L * 5), 1);
+        g.add(sol1, now);
+        assertEquals(2, g.getSolutions().length());
+        assertEquals(3, g.getSolutions().getValue().remainingPatterns);
+        assertEquals(now + 1000L * 5, g.getSolutions().getValue().expirationTime);
+
     }
 }

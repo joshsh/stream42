@@ -275,19 +275,19 @@ public class SolutionIndexTest {
 
         now = 42;
 
-        Solution<String> solExp1_1 = new Solution<String>(5, 0, bindings1, now + 10);
-        Solution<String> solExp1_2 = new Solution<String>(new Solution<String>(5, 1, bindings1, now + 5), 2);
+        Solution<String> solExp1_1 = new Solution<String>(5, 0, bindings1, now + 1000L * 10);
+        Solution<String> solExp1_2 = new Solution<String>(new Solution<String>(5, 1, bindings1, now + 1000L * 5), 2);
         Solution<String> solNonExp1_1 = new Solution<String>(new Solution<String>(5, 4, bindings1, 0), 1);
         Solution<String> solNonExp1_2 = new Solution<String>(new Solution<String>(5, 3, bindings1, 0), 1);
         Solution<String> solExp1_3 = new Solution<String>(5,
                 new Solution<String>(5, 3, bindings1, 0),
-                new Solution<String>(5, 4, bindings1, now + 20));
+                new Solution<String>(5, 4, bindings1, now + 1000L * 20));
 
-        Solution<String> solExp2_1 = new Solution<String>(5, 0, bindings2, now + 10);
-        Solution<String> solExp2_2 = new Solution<String>(new Solution<String>(5, 1, bindings2, now + 5), 2);
+        Solution<String> solExp2_1 = new Solution<String>(5, 0, bindings2, now + 1000L * 10);
+        Solution<String> solExp2_2 = new Solution<String>(new Solution<String>(5, 1, bindings2, now + 1000L * 5), 2);
         Solution<String> solExp2_3 = new Solution<String>(5,
                 new Solution<String>(5, 3, bindings2, 0),
-                new Solution<String>(5, 4, bindings2, now + 20));
+                new Solution<String>(5, 4, bindings2, now + 1000L * 20));
 
         index.add(solExp1_1, now);
         index.add(solExp1_2, now);
@@ -313,7 +313,7 @@ public class SolutionIndexTest {
         assertEquals(3, count(index.getSolutions("x", "puce")));
         assertEquals(3, count(index.getSolutions("y", "teal")));
 
-        now += 6;
+        now += 1000L * 6;
         index.removeExpired(now);
 
         assertEquals(4, count(index.getSolutions("x", "red")));
@@ -322,7 +322,7 @@ public class SolutionIndexTest {
         assertEquals(2, count(index.getSolutions("x", "puce")));
         assertEquals(2, count(index.getSolutions("y", "teal")));
 
-        now += 5;
+        now += 1000L * 5;
         index.removeExpired(now);
 
         assertEquals(3, count(index.getSolutions("x", "red")));
@@ -331,7 +331,7 @@ public class SolutionIndexTest {
         assertEquals(1, count(index.getSolutions("x", "puce")));
         assertEquals(1, count(index.getSolutions("y", "teal")));
 
-        now += 10;
+        now += 1000L * 10;
         index.removeExpired(now);
 
         assertEquals(2, count(index.getSolutions("x", "red")));
