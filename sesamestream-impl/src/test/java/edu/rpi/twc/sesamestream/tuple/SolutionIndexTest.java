@@ -20,31 +20,32 @@ public class SolutionIndexTest {
     private long now;
     private long exp = 0;
 
-    private GraphPattern.QueryVariables vars;
+    private Query.QueryVariables vars;
     private SolutionIndex<String> index;
 
     @Before
     public void setUp() throws Exception {
         now = System.currentTimeMillis();
 
-        vars = new GraphPattern.QueryVariables(Arrays.asList("x", "y", "z"));
+        vars = new Query.QueryVariables(Arrays.asList("x", "y", "z"));
 
         int totalPatterns = 3;
-        index = new SolutionIndex<String>(vars, totalPatterns);
+        int tupleSize = 3;
+        index = new SolutionIndex<String>(vars, totalPatterns, tupleSize);
     }
 
     @Test
     public void testGetSolutions() throws Exception {
         Solution<String> ps;
         HashMap<String, String> map1;
-        VariableBindings<String> b1;
+        Bindings<String> b1;
 
         assertEquals(0, count(index.getSolutions("x", "red")));
 
         map1 = new HashMap<String, String>();
         map1.put("x", "red");
         map1.put("y", "green");
-        b1 = new VariableBindings<String>(map1, vars);
+        b1 = new Bindings<String>(map1, vars);
         ps = new Solution<String>(3, 0, b1, exp);
         index.add(ps, now);
         assertEquals(1, count(index.getSolutions("x", "red")));
@@ -55,7 +56,7 @@ public class SolutionIndexTest {
         // new solution with new binding
         map1 = new HashMap<String, String>();
         map1.put("z", "blue");
-        b1 = new VariableBindings<String>(map1, vars);
+        b1 = new Bindings<String>(map1, vars);
         ps = new Solution<String>(ps, 1, b1);
         index.add(ps, now);
         assertEquals(2, count(index.getSolutions("x", "red")));
@@ -67,7 +68,7 @@ public class SolutionIndexTest {
         map1 = new HashMap<String, String>();
         map1.put("x", "red");
         map1.put("y", "green");
-        b1 = new VariableBindings<String>(map1, vars);
+        b1 = new Bindings<String>(map1, vars);
         ps = new Solution<String>(3, 1, b1, exp);
         index.add(ps, now);
         assertEquals(3, count(index.getSolutions("x", "red")));
@@ -83,7 +84,7 @@ public class SolutionIndexTest {
         map1 = new HashMap<String, String>();
         map1.put("x", "puce");
         map1.put("y", "green");
-        b1 = new VariableBindings<String>(map1, vars);
+        b1 = new Bindings<String>(map1, vars);
         ps = new Solution<String>(3, 0, b1, exp);
         index.add(ps, now);
         assertEquals(2, count(index.getSolutions("x", "red")));
@@ -94,69 +95,69 @@ public class SolutionIndexTest {
     @Test
     public void testGetComplementarySolutions() throws Exception {
         HashMap<String, String> map1, map2;
-        VariableBindings<String> b1, b2;
+        Bindings<String> b1, b2;
         Solution<String> ps1, ps2;
 
         map1 = new HashMap<String, String>();
         map1.put("x", "red");
         map1.put("z", "blue");
-        b1 = new VariableBindings<String>(map1, vars);
+        b1 = new Bindings<String>(map1, vars);
         ps1 = new Solution<String>(3, 0, b1, exp);
 
-        assertEquals(0, count(index.getComplementarySolutions("x", "red", ps1)));
+        assertEquals(0, count(index.getComposableSolutions("x", "red", ps1)));
 
         // this has no effect on x:red
         map2 = new HashMap<String, String>();
         map2.put("x", "puce");
         map2.put("y", "green");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 1, b2, exp);
         index.add(ps2, now);
-        assertEquals(0, count(index.getComplementarySolutions("x", "red", ps1)));
+        assertEquals(0, count(index.getComposableSolutions("x", "red", ps1)));
 
         // this adds a solution which binds to x:red, but it conflicts with ps1 in z
         map2 = new HashMap<String, String>();
         map2.put("x", "red");
         map2.put("z", "green");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 1, b2, exp);
         index.add(ps2, now);
-        assertEquals(0, count(index.getComplementarySolutions("x", "red", ps1)));
+        assertEquals(0, count(index.getComposableSolutions("x", "red", ps1)));
 
         // this adds a solution which is compatible in variables, but overlaps in patterns
         map2 = new HashMap<String, String>();
         map2.put("y", "green");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(ps1, 2, b2);
         index.add(ps2, now);
-        assertEquals(0, count(index.getComplementarySolutions("x", "red", ps1)));
+        assertEquals(0, count(index.getComposableSolutions("x", "red", ps1)));
 
         // now we have a solution which does not conflict, and can be joined with the original solution
         map2 = new HashMap<String, String>();
         map2.put("x", "red");
         map2.put("y", "green");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 2, b2, exp);
         index.add(ps2, now);
-        assertEquals(1, count(index.getComplementarySolutions("x", "red", ps1)));
+        assertEquals(1, count(index.getComposableSolutions("x", "red", ps1)));
     }
 
     @Test
     public void testComposeSolutions() throws Exception {
         HashMap<String, String> map1, map2;
-        VariableBindings<String> b1, b2;
+        Bindings<String> b1, b2;
         Solution<String> ps1, ps2;
 
         map1 = new HashMap<String, String>();
         map1.put("x", "red");
         map1.put("z", "blue");
-        b1 = new VariableBindings<String>(map1, vars);
+        b1 = new Bindings<String>(map1, vars);
         ps1 = new Solution<String>(3, 0, b1, exp);
 
         // add an incompatible solution
         map2 = new HashMap<String, String>();
         map2.put("y", "green");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(ps1, 2, b2);
         index.add(ps2, now);
         assertEquals(0, count(index.composeSolutions("x", "red", ps1)));
@@ -165,14 +166,14 @@ public class SolutionIndexTest {
         map2 = new HashMap<String, String>();
         map2.put("x", "red");
         map2.put("y", "green");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 2, b2, exp);
         index.add(ps2, now);
         assertEquals(1, count(index.composeSolutions("x", "red", ps1)));
         map2 = new HashMap<String, String>();
         map2.put("x", "red");
         map2.put("y", "hazel");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 2, b2, exp);
         index.add(ps2, now);
         assertEquals(2, count(index.composeSolutions("x", "red", ps1)));
@@ -181,55 +182,55 @@ public class SolutionIndexTest {
     @Test
     public void testBindAndComposeSolutions() throws Exception {
         HashMap<String, String> map1, map2;
-        VariableBindings<String> b1, b2;
+        Bindings<String> b1, b2;
         Solution<String> ps1, ps2;
         Stack<Solution<String>> solutions = new Stack<Solution<String>>();
 
-        TuplePattern<String> pattern = new TuplePattern<String>(new Term[]{
-                new Term(null, "x"), new Term("isRedderThan", null), new Term(null, "z")});
-        Tuple<String> tuple = new Tuple<String>(new String[]{"red", "isRedderThan", "blue"});
+        Term<String>[] pattern = new Term[]{
+                new Term(null, "x"), new Term("isRedderThan", null), new Term(null, "z")};
+        String[] tuple = new String[]{"red", "isRedderThan", "blue"};
 
         map1 = new HashMap<String, String>();
         map1.put("x", "red");
         map1.put("z", "blue");
-        b1 = new VariableBindings<String>(map1, vars);
+        b1 = new Bindings<String>(map1, vars);
         ps1 = new Solution<String>(3, 0, b1, exp);
 
         solutions.clear();
-        index.bindAndSolve(ps1, pattern, tuple, 0, 3, solutions);
+        index.bindAndSolve(ps1, pattern, tuple, solutions);
         assertEquals(0, solutions.size());
 
         map2 = new HashMap<String, String>();
         map2.put("x", "red");
         map2.put("y", "green");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 2, b2, exp);
         index.add(ps2, now);
 
         solutions.clear();
-        index.bindAndSolve(ps1, pattern, tuple, 0, 3, solutions);
+        index.bindAndSolve(ps1, pattern, tuple, solutions);
         assertEquals(1, solutions.size());
 
         map2 = new HashMap<String, String>();
         map2.put("x", "red");
         map2.put("y", "hazel");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 2, b2, exp);
         index.add(ps2, now);
 
         solutions.clear();
-        index.bindAndSolve(ps1, pattern, tuple, 0, 3, solutions);
+        index.bindAndSolve(ps1, pattern, tuple, solutions);
         assertEquals(2, solutions.size());
 
         // add an irrelevant solution
         map2 = new HashMap<String, String>();
         map2.put("y", "green");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 2, b2, exp);
         index.add(ps2, now);
 
         solutions.clear();
-        index.bindAndSolve(ps1, pattern, tuple, 0, 3, solutions);
+        index.bindAndSolve(ps1, pattern, tuple, solutions);
         assertEquals(2, solutions.size());
 
         // add a solution which is reached through recursion.
@@ -237,12 +238,12 @@ public class SolutionIndexTest {
         map2 = new HashMap<String, String>();
         map2.put("y", "green");
         map2.put("z", "blue");
-        b2 = new VariableBindings<String>(map2, vars);
+        b2 = new Bindings<String>(map2, vars);
         ps2 = new Solution<String>(3, 1, b2, exp);
         index.add(ps2, now);
 
         solutions.clear();
-        index.bindAndSolve(ps1, pattern, tuple, 0, 3, solutions);
+        index.bindAndSolve(ps1, pattern, tuple, solutions);
         assertEquals(4, solutions.size());
         Map<Long, Solution<String>> solutionMap = toMap(solutions);
         // solutions are unique
@@ -252,10 +253,10 @@ public class SolutionIndexTest {
         map1.put("x", "red");
         map1.put("y", "green");
         map1.put("z", "blue");
-        b1 = new VariableBindings<String>(map1, vars);
+        b1 = new Bindings<String>(map1, vars);
         Solution<String> ps = solutionMap.get(b1.getHash());
         assertNotNull(ps);
-        assertEquals(1, ps.getRemainingPatterns());
+        assertEquals(1, ps.remainingPatterns);
         assertEquals(6, ps.matchedPatterns);
     }
 
@@ -265,12 +266,12 @@ public class SolutionIndexTest {
         bindingMap.put("x", "red");
         bindingMap.put("y", "green");
         bindingMap.put("z", "blue");
-        VariableBindings<String> bindings1 = new VariableBindings<String>(bindingMap, vars);
+        Bindings<String> bindings1 = new Bindings<String>(bindingMap, vars);
 
         bindingMap = new HashMap<String, String>();
         bindingMap.put("x", "puce");
         bindingMap.put("y", "teal");
-        VariableBindings<String> bindings2 = new VariableBindings<String>(bindingMap, vars);
+        Bindings<String> bindings2 = new Bindings<String>(bindingMap, vars);
 
         now = 42;
 
@@ -304,7 +305,7 @@ public class SolutionIndexTest {
         assertEquals(3, count(index.getSolutions("x", "puce")));
         assertEquals(3, count(index.getSolutions("y", "teal")));
 
-        index.removeExpiredSolutions(now);
+        index.removeExpired(now);
 
         assertEquals(5, count(index.getSolutions("x", "red")));
         assertEquals(5, count(index.getSolutions("y", "green")));
@@ -313,7 +314,7 @@ public class SolutionIndexTest {
         assertEquals(3, count(index.getSolutions("y", "teal")));
 
         now += 6;
-        index.removeExpiredSolutions(now);
+        index.removeExpired(now);
 
         assertEquals(4, count(index.getSolutions("x", "red")));
         assertEquals(4, count(index.getSolutions("y", "green")));
@@ -322,7 +323,7 @@ public class SolutionIndexTest {
         assertEquals(2, count(index.getSolutions("y", "teal")));
 
         now += 5;
-        index.removeExpiredSolutions(now);
+        index.removeExpired(now);
 
         assertEquals(3, count(index.getSolutions("x", "red")));
         assertEquals(3, count(index.getSolutions("y", "green")));
@@ -331,7 +332,7 @@ public class SolutionIndexTest {
         assertEquals(1, count(index.getSolutions("y", "teal")));
 
         now += 10;
-        index.removeExpiredSolutions(now);
+        index.removeExpired(now);
 
         assertEquals(2, count(index.getSolutions("x", "red")));
         assertEquals(2, count(index.getSolutions("y", "green")));

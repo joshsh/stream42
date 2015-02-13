@@ -7,24 +7,54 @@ package edu.rpi.twc.sesamestream.tuple;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SolutionGroup<T> {
-    private final VariableBindings<T> bindings;
+    private final Bindings<T> bindings;
     private LList<SolutionPattern> solutions = LList.NIL;
 
-    public SolutionGroup(VariableBindings<T> bindings) {
+    /**
+     * Creates a new solution group for a set of bindings
+     *
+     * @param bindings a set of bindings.  A solution group is uniquely identified by its bindings, in combination
+     *                 with the query variables from which they are drawn.
+     */
+    public SolutionGroup(Bindings<T> bindings) {
         this.bindings = bindings;
     }
 
-    public VariableBindings<T> getBindings() {
+    /**
+     * Gets the bindings of this solution group
+     * @return a set of bindings
+     */
+    public Bindings<T> getBindings() {
         return bindings;
     }
 
+    /**
+     * Gets the solutions contained in this group
+     *
+     * @return a linked list of solution pattern contained in this group.
+     * Logically, a solution is a solution pattern combined with a set of bindings, which are provided here by
+     * <code>getBindings()</code>.
+     */
     public LList<SolutionPattern> getSolutions() {
         return solutions;
     }
 
-    // note: we assume identical bindings
+    /**
+     * Adds a solution, logically, to this group.
+     * The provided solution may simply be appended to the list of solution patterns or, if it is equal to, contains
+     * or is contained in another pattern in the group, will replace another pattern or simply be ignored if the
+     * expiration times of the solutions in question make this possible.
+     *
+     * @param sol a new solution for potential addition to this group.
+     *            The bindings of the added solution must be identical to those of this group.
+     * @param now the current time in milliseconds since the Unix epoch.
+     *            The solution group is updated with respect to this time stamp in that an expired solution will
+     *            be rejected and expired solutions still present in the group and encountered in the process of
+     *            insertion will be removed.
+     */
     public void add(final Solution<T> sol,
                     final long now) {
+        // do not add an expired solution
         if (sol.isExpired(now)) {
             return;
         }
@@ -41,14 +71,21 @@ public class SolutionGroup<T> {
                 SolutionPattern.ContainmentRelation r = curSol.relateTo(sol);
                 switch (r) {
                     case Contains:
-                        // old solution contains new solution; ignore the new one
-                        return;
+                        // old solution contains new solution; ignore the new one, but *only* if it will expire first
+                        if (SolutionPattern.compareExpirationTimes(curSol, sol) >= 0) {
+                            return;
+                        }
+                        break;
                     case ContainedIn:
-                        // new solution contains old solution; remove the former
-                        removeOld = true;
+                        // new solution contains old solution; remove the former, but *only* if it expires first
+                        if (SolutionPattern.compareExpirationTimes(curSol, sol) <= 0) {
+                            removeOld = true;
+                        }
                         break;
                     case Equal:
-                        // new solution is identical to the old solution; ignore the new one
+                        // new solution is identical to the old solution; simply update the expiration time
+                        long expirationTime = SolutionPattern.maxExpirationTime(curSol, sol);
+                        curSol.setExpirationTime(expirationTime);
                         return;
                     case PartialIntersect:
                         // old and new solutions have one or more patterns in common, and are yet distinct
@@ -77,6 +114,13 @@ public class SolutionGroup<T> {
                 new SolutionPattern(sol));
     }
 
+    /**
+     * Removes all expired solutions from this group.
+     * Note that this operation may cause the group to become empty.
+     *
+     * @param now the current time, in milliseconds since the Unix epoch
+     * @return the number of solutions removed from this group
+     */
     public int removeExpired(final long now) {
         int removed = 0;
 

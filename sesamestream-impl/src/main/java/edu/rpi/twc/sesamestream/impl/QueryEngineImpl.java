@@ -4,13 +4,11 @@ import edu.rpi.twc.sesamestream.BindingSetHandler;
 import edu.rpi.twc.sesamestream.QueryEngine;
 import edu.rpi.twc.sesamestream.SesameStream;
 import edu.rpi.twc.sesamestream.Subscription;
-import edu.rpi.twc.sesamestream.tuple.GraphPattern;
+import edu.rpi.twc.sesamestream.tuple.Query;
 import edu.rpi.twc.sesamestream.tuple.LList;
 import edu.rpi.twc.sesamestream.tuple.QueryIndex;
 import edu.rpi.twc.sesamestream.tuple.Term;
-import edu.rpi.twc.sesamestream.tuple.Tuple;
-import edu.rpi.twc.sesamestream.tuple.TuplePattern;
-import edu.rpi.twc.sesamestream.tuple.VariableBindings;
+import edu.rpi.twc.sesamestream.tuple.Bindings;
 import net.fortytwo.linkeddata.CacheEntry;
 import net.fortytwo.linkeddata.LinkedDataCache;
 import net.fortytwo.ripple.RippleException;
@@ -100,7 +98,7 @@ public class QueryEngineImpl implements QueryEngine {
         counters.put(Quantity.Solutions, countSolutions);
         solutionHandler = new QueryIndex.SolutionHandler<Value>() {
             @Override
-            public void handle(final String id, final VariableBindings<Value> bindings) {
+            public void handle(final String id, final Bindings<Value> bindings) {
                 handleCandidateSolution(id, bindings);
             }
         };
@@ -167,7 +165,7 @@ public class QueryEngineImpl implements QueryEngine {
         logHeader();
     }
 
-    public Subscription addQuery(final long ttl,
+    public Subscription addQuery(final int ttl,
                                  final String q,
                                  final BindingSetHandler handler) throws IncompatibleQueryException, InvalidQueryException {
         // TODO
@@ -194,22 +192,23 @@ public class QueryEngineImpl implements QueryEngine {
      * @return a subscription for computation of future query answers
      * @throws IncompatibleQueryException if the syntax of the query is not supported by this engine
      */
-    public Subscription addQuery(final long ttl,
+    public Subscription addQuery(final int ttl,
                                  final TupleExpr t,
                                  final BindingSetHandler h) throws IncompatibleQueryException {
         increment(countQueries, true);
-        timeCurrentOperationBegan = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        timeCurrentOperationBegan = now;
 
-        Query q = new Query(t);
+        SparqlQuery q = new SparqlQuery(t);
 
-        GraphPattern<Value> graphPattern = toNative(q, ttl);
-        queryIndex.add(graphPattern);
-        SubscriptionImpl s = new SubscriptionImpl(q, graphPattern, h, this);
+        Query<Value> query = toNative(q, ttl, now);
+        queryIndex.add(query);
+        SubscriptionImpl s = new SubscriptionImpl(q, query, h, this);
         register(s);
 
         if (null != linkedDataCache) {
-            for (TuplePattern<Value> p : graphPattern.getPatterns()) {
-                triggerLinkedDataCache(p);
+            for (Query.PatternInQuery<Value> p : query.getPatterns()) {
+                triggerLinkedDataCache(p.getTerms());
             }
         }
 
@@ -218,48 +217,48 @@ public class QueryEngineImpl implements QueryEngine {
         return s;
     }
 
-    public void addStatement(final long ttl, final Statement s) {
+    public void addStatement(final int ttl, final Statement s) {
         increment(countStatements, false);
         long now = System.currentTimeMillis();
         timeCurrentOperationBegan = now;
 
-        Tuple<Value> tuple = toNative(s);
-        boolean matched = queryIndex.match(tuple, solutionHandler, ttl, now);
+        Value[] tuple = toNative(s);
+        boolean changed = queryIndex.add(tuple, solutionHandler, ttl, now);
 
         // cue the Linked Data cache to dereference the subject and object URIs of the statement,
         // but only if at least one pattern in the index has matched the tuple
-        if (matched && null != linkedDataCache) {
+        if (changed && null != linkedDataCache) {
             triggerLinkedDataCache(tuple);
         }
 
         logEntry();
     }
 
-    public void addStatements(final long ttl, final Statement... statements) {
+    public void addStatements(final int ttl, final Statement... statements) {
         for (Statement s : statements) {
             addStatement(ttl, s);
         }
     }
 
-    public void addStatements(final long ttl, final Collection<Statement> statements) {
+    public void addStatements(final int ttl, final Collection<Statement> statements) {
         for (Statement s : statements) {
             addStatement(ttl, s);
         }
     }
 
     private void register(final SubscriptionImpl subscription) {
-        subscriptions.put(subscription.getGraphPattern().getId(), subscription);
+        subscriptions.put(subscription.getQuery().getId(), subscription);
     }
 
     // free up the resources occupied by this subscription and prevent it from matching future data
     public void unregister(final SubscriptionImpl subscription) {
-        queryIndex.remove(subscription.getGraphPattern());
-        subscriptions.remove(subscription.getGraphPattern().getId());
+        queryIndex.remove(subscription.getQuery());
+        subscriptions.remove(subscription.getQuery().getId());
     }
 
-    public void renew(final SubscriptionImpl subscription, final long ttl) {
+    public void renew(final SubscriptionImpl subscription, final int ttl) {
         long now = System.currentTimeMillis();
-        queryIndex.renew(subscription.getGraphPattern(), ttl, now);
+        queryIndex.renew(subscription.getQuery(), ttl, now);
     }
 
     private void scheduleTtlCleanup() {
@@ -276,32 +275,31 @@ public class QueryEngineImpl implements QueryEngine {
         }, TTL_CLEANUP_INITIAL_DELAY_MS, TTL_CLEANUP_PERIOD_MS, TimeUnit.MILLISECONDS);
     }
 
-    private Tuple<Value> toNative(final Statement s) {
+    private Value[] toNative(final Statement s) {
         // note: assumes tupleSize==3
-        return new Tuple<Value>(new Value[]{s.getSubject(), s.getPredicate(), s.getObject()});
+        return new Value[]{s.getSubject(), s.getPredicate(), s.getObject()};
     }
 
-    private GraphPattern<Value> toNative(final Query q, final long ttl) {
-        List<TuplePattern<Value>> patterns = new LinkedList<TuplePattern<Value>>();
-        LList<TuplePattern<Value>> tPatterns = q.getTriplePatterns();
+    private Query<Value> toNative(final SparqlQuery q, final int ttl, final long now) {
+        List<Term<Value>[]> patterns = new LinkedList<Term<Value>[]>();
+        LList<Term<Value>[]> tPatterns = q.getTriplePatterns();
         while (!tPatterns.isNil()) {
             patterns.add(tPatterns.getValue());
             tPatterns = tPatterns.getRest();
         }
 
-        return new GraphPattern<Value>(patterns, ttl);
+        return new Query<Value>(patterns, now + 1000L * ttl);
     }
 
-    private void triggerLinkedDataCache(final Tuple<Value> tuple) {
-        Value[] a = tuple.getElements();
-        if (a.length >= 1) {
-            Value subject = a[0];
+    private void triggerLinkedDataCache(final Value[] tuple) {
+        if (tuple.length >= 1) {
+            Value subject = tuple[0];
             if (subject instanceof URI) {
                 indexLinkedDataUri((URI) subject);
             }
 
-            if (a.length >= 3) {
-                Value object = a[2];
+            if (tuple.length >= 3) {
+                Value object = tuple[2];
                 if (object instanceof URI) {
                     indexLinkedDataUri((URI) object);
                 }
@@ -309,16 +307,15 @@ public class QueryEngineImpl implements QueryEngine {
         }
     }
 
-    private void triggerLinkedDataCache(final TuplePattern<Value> pattern) {
-        Term<Value>[] a = pattern.getTerms();
-        if (a.length >= 1) {
-            Value subject = a[0].getValue();
+    private void triggerLinkedDataCache(final Term<Value>[] pattern) {
+        if (pattern.length >= 1) {
+            Value subject = pattern[0].getValue();
             if (null != subject && subject instanceof URI) {
                 indexLinkedDataUri((URI) subject);
             }
 
-            if (a.length >= 3) {
-                Value object = a[2].getValue();
+            if (pattern.length >= 3) {
+                Value object = pattern[2].getValue();
                 if (null != object && object instanceof URI) {
                     indexLinkedDataUri((URI) object);
                 }
@@ -343,13 +340,13 @@ public class QueryEngineImpl implements QueryEngine {
     }
 
     private void handleCandidateSolution(final String id,
-                                         final VariableBindings<Value> bindings) {
+                                         final Bindings<Value> bindings) {
         SubscriptionImpl subscription = subscriptions.get(id);
         if (null == subscription) {
             throw new IllegalStateException();
         }
 
-        Query query = subscription.getQuery();
+        SparqlQuery sparqlQuery = subscription.getSparqlQuery();
 
         // After queries are removed from the query index, a few more query answers (from the last added statement,
         // which completed an ASK query, for example) may arrive here and need to be excluded
@@ -357,7 +354,7 @@ public class QueryEngineImpl implements QueryEngine {
             return;
         }
 
-        List<Filter> filters = query.getFilters();
+        List<Filter> filters = sparqlQuery.getFilters();
 
         // this BindingSet may contain non-selected and pre-projected variables, suitable
         // for filtering, but not yet a final query result
@@ -380,15 +377,15 @@ public class QueryEngineImpl implements QueryEngine {
         MapBindingSet solution = new MapBindingSet();
 
         // remove non-selected variables and project the final names of the selected variables
-        for (String key : query.getBindingNames()) {
+        for (String key : sparqlQuery.getBindingNames()) {
             Value value = bindings.get(key);
             if (null == value) {
                 //if (null == query.getConstants() || !query.getConstants().keySet().contains(key)) {
                 //    throw new IllegalStateException("no value for variable " + key);
                 //}
             } else {
-                if (null != query.getExtendedBindingNames()) {
-                    String keyp = query.getExtendedBindingNames().get(key);
+                if (null != sparqlQuery.getExtendedBindingNames()) {
+                    String keyp = sparqlQuery.getExtendedBindingNames().get(key);
                     if (null != keyp) {
                         key = keyp;
                     }
@@ -398,18 +395,18 @@ public class QueryEngineImpl implements QueryEngine {
         }
 
         // adding constants after filter application assumes that one will never filter on constants
-        if (null != query.getConstants()) {
-            for (Map.Entry<String, Value> e : query.getConstants().entrySet()) {
+        if (null != sparqlQuery.getConstants()) {
+            for (Map.Entry<String, Value> e : sparqlQuery.getConstants().entrySet()) {
                 solution.addBinding(e.getKey(), e.getValue());
             }
         }
 
-        Query.QueryForm form = query.getQueryForm();
+        SparqlQuery.QueryForm form = sparqlQuery.getQueryForm();
 
         // note: SesameStream's response to an ASK query which evaluates to true is an empty BindingSet
         // A result of false is never produced, as data sources are assumed to be infinite streams
-        if (Query.QueryForm.SELECT == form) {
-            if (query.getSequenceModifier().trySolution(solution, subscription)) {
+        if (SparqlQuery.QueryForm.SELECT == form) {
+            if (sparqlQuery.getSequenceModifier().trySolution(solution, subscription)) {
                 handleSolution(subscription.getHandler(), solution);
             }
         } else {
@@ -417,7 +414,7 @@ public class QueryEngineImpl implements QueryEngine {
         }
     }
 
-    private BindingSet toBindingSet(final VariableBindings<Value> bindings) {
+    private BindingSet toBindingSet(final Bindings<Value> bindings) {
 
         MapBindingSet bs = new MapBindingSet();
         for (Map.Entry<String, Value> e : bindings.entrySet()) {

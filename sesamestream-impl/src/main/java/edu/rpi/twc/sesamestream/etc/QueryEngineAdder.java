@@ -15,10 +15,10 @@ import java.io.IOException;
  */
 public class QueryEngineAdder implements RDFHandler {
     private final QueryEngine queryEngine;
-    private final long ttl;
+    private final int ttl;
 
     public QueryEngineAdder(final QueryEngine queryEngine,
-                            final long ttl) {
+                            final int ttl) {
         this.queryEngine = queryEngine;
         this.ttl = ttl;
     }

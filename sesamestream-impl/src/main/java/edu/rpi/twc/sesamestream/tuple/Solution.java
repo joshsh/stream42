@@ -5,12 +5,12 @@ package edu.rpi.twc.sesamestream.tuple;
  * representing a complete or partial solution to a query.
  * It stores the pattern or patterns of the query which have been matched
  * as well as the resulting variable/value bindings.
- * Logically, a SesameStream query index is a set of solutions associated with subscriptions.
+ * Logically, a SesameStream query index is a set of solutions associated with their queries.
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class Solution<T> extends SolutionPattern {
-    private VariableBindings<T> bindings;
+    private Bindings<T> bindings;
 
     /**
      * Copy constructor
@@ -32,7 +32,7 @@ public class Solution<T> extends SolutionPattern {
      */
     public Solution(final int totalPatterns,
                     final int index,
-                    final VariableBindings<T> bindings,
+                    final Bindings<T> bindings,
                     final long expirationTime) {
         super(totalPatterns - 1, 1 << index, expirationTime);
         this.bindings = bindings;
@@ -48,9 +48,9 @@ public class Solution<T> extends SolutionPattern {
     // note: this constructor is currently only used in unit tests
     public Solution(final Solution<T> other,
                     final int index,
-                    final VariableBindings<T> newBindings) {
+                    final Bindings<T> newBindings) {
         super(other.remainingPatterns - 1, other.matchedPatterns | (1 << index), other.expirationTime);
-        this.bindings = VariableBindings.from(other.bindings, newBindings);
+        this.bindings = Bindings.from(other.bindings, newBindings);
     }
 
     // note: assumes complementary solutions
@@ -59,16 +59,25 @@ public class Solution<T> extends SolutionPattern {
                     final Solution<T> second) {
         super(first.remainingPatterns + second.remainingPatterns - totalPatterns,
                 first.matchedPatterns | second.matchedPatterns,
-                composeExpirationTimes(first.expirationTime, second.expirationTime));
+                minExpirationTime(first, second));
 
-        bindings = VariableBindings.from(first.bindings, second.bindings);
+        bindings = Bindings.from(first.bindings, second.bindings);
     }
 
-    public VariableBindings<T> getBindings() {
+    /**
+     * Gets the variables bindings of this solution
+     * @return the variable bindings of this solution.  When the solution is complete
+     * (i.e. when all patterns of the query have been matched) the bindings are the the actual query "answer".
+     */
+    public Bindings<T> getBindings() {
         return bindings;
     }
 
-    public void setBindings(final VariableBindings<T> bindings) {
+    /**
+     * Sets the variable bindings of this solution.  This method is used internally, by the solution index.
+     * @param bindings the new variable bindings
+     */
+    public void setBindings(final Bindings<T> bindings) {
         this.bindings = bindings;
     }
 
@@ -80,8 +89,8 @@ public class Solution<T> extends SolutionPattern {
      * @param vars  the query variables from which both solutions are drawn
      * @return whether the solutions are both disjoint in patterns and compatible in bindings
      */
-    public boolean complements(final Solution<T> other,
-                               final GraphPattern.QueryVariables vars) {
+    public boolean composableWith(final Solution<T> other,
+                                  final Query.QueryVariables vars) {
         // note: we check for pattern disjointness first, as this is a much cheaper operation
         // than the check for conflicting bindings
         return disjointWith(other)

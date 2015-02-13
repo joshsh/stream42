@@ -8,97 +8,124 @@ import java.util.Map;
 import java.util.Stack;
 
 /**
- * An index of partial and complete solutions for a given query
+ * An index of partial and complete solutions for a particular query
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SolutionIndex<T> {
-    private final Map<String, Map<T, GroupIndex<T>>> solutionsByBinding
-            = new HashMap<String, Map<T, GroupIndex<T>>>();
-    private final GraphPattern.QueryVariables queryVariables;
+    private final Map<String, Map<T, GroupIndex<T>>> solutionsByBinding = new HashMap<String, Map<T, GroupIndex<T>>>();
+    private final Query.QueryVariables queryVariables;
     private final int totalPatterns;
+    private final int tupleSize;
 
-    public SolutionIndex(final GraphPattern.QueryVariables queryVariables,
-                         final int totalPatterns) {
+    /**
+     * Constructs a new solution index
+     *
+     * @param queryVariables the variables of the query for which this is an index
+     * @param totalPatterns  the total number of tuple patterns in the query for which this is an index
+     * @param tupleSize the size of the tuples matched in the corresponding query index
+     */
+    public SolutionIndex(final Query.QueryVariables queryVariables,
+                         final int totalPatterns,
+                         final int tupleSize) {
         this.queryVariables = queryVariables;
         this.totalPatterns = totalPatterns;
+        this.tupleSize = tupleSize;
     }
 
-    public void add(final Solution<T> ps, final long now) {
+    /**
+     * Adds a solution to this index.
+     * This operation may or may not change the state of the index.
+     *
+     * @param sol the solution to add
+     * @param now the current time, in milliseconds since the Unix epoch
+     */
+    public void add(final Solution<T> sol, final long now) {
         // make the added partial solution accessible through each of its bindings
-        for (Map.Entry<String, T> e : ps.getBindings().entrySet()) {
-            add(e.getKey(), e.getValue(), ps, now);
+        for (Map.Entry<String, T> e : sol.getBindings().entrySet()) {
+            add(e.getKey(), e.getValue(), sol, now);
         }
     }
 
-    public void add(final String variable, final T value, final Solution<T> ps, final long now) {
-        Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(variable);
-        if (null == byVariable) {
-            byVariable = new HashMap<T, GroupIndex<T>>();
-            solutionsByBinding.put(variable, byVariable);
-        }
-
-        GroupIndex<T> byValue = byVariable.get(value);
-        if (null == byValue) {
-            byValue = new GroupIndex<T>();
-            byVariable.put(value, byValue);
-        }
-
-        byValue.add(ps, now);
-    }
-
+    /**
+     * Retrieves all solutions for a given variable/value pair
+     *
+     * @param variable a query variable
+     * @param value    a value bound to a query variable
+     * @return an iterator over all solutions to the query which contain the given binding
+     */
     public Iterator<Solution<T>> getSolutions(final String variable, final T value) {
         GroupIndex<T> g = getGroupIndex(variable, value);
         return null == g ? null : new SolutionIterator<T>(g.groups.values().iterator());
     }
 
-    public Iterator<Solution<T>> getComplementarySolutions(final String variable,
-                                                                  final T value,
-                                                                  final Solution<T> ps) {
+    // note: used only in unit tests
+    public Iterator<Solution<T>> getComposableSolutions(final String variable,
+                                                        final T value,
+                                                        final Solution<T> ps) {
         Iterator<Solution<T>> iter = getSolutions(variable, value);
         return null == iter ? null : new FilteredIterator<Solution<T>, Solution<T>>(iter) {
             @Override
             protected Solution<T> test(final Solution<T> element) {
-                return ps.complements(element, queryVariables) ? ps : null;
+                return ps.composableWith(element, queryVariables) ? ps : null;
             }
         };
     }
 
+    // note: used only in unit tests
     public Iterator<Solution<T>> composeSolutions(final String variable,
-                                                         final T value,
-                                                         final Solution<T> ps) {
+                                                  final T value,
+                                                  final Solution<T> ps) {
         Iterator<Solution<T>> iter = getSolutions(variable, value);
         return null == iter ? null : new FilteredIterator<Solution<T>, Solution<T>>(iter) {
             @Override
             protected Solution<T> test(final Solution<T> element) {
-                return ps.complements(element, queryVariables)
+                return ps.composableWith(element, queryVariables)
                         // TODO: avoid new object creation here when possible
                         ? new Solution<T>(totalPatterns, ps, element) : null;
             }
         };
     }
 
+    /**
+     * A complex operation which joins all possible solutions according to the bindings created when a tuple
+     * pattern matches a tuple.
+     * Only self-consistent and non-expired solutions are produced.
+     *
+     * @param matchedSolution the initial solution produced by matching the tuple pattern against the tuple
+     * @param pattern the matching tuple pattern
+     * @param tuple the matched tuple
+     * @param solutions a stack of solutions to which the solutions retrieved or produced
+     *                  in this operation will be added
+     * @return the number of solutions added to the stack. Note that solutions are not necessarily unique.
+     */
     public int bindAndSolve(final Solution<T> matchedSolution,
-                            final TuplePattern<T> pattern,
-                            final Tuple<T> tuple,
-                            final int level,
-                            final int tupleSize,
+                            final Term<T>[] pattern,
+                            final T[] tuple,
                             final Stack<Solution<T>> solutions) {
+        return bindAndSolve(matchedSolution, pattern, tuple, 0, solutions);
+    }
+
+    private int bindAndSolve(final Solution<T> matchedSolution,
+                             final Term<T>[] pattern,
+                             final T[] tuple,
+                             final int level,
+                             final Stack<Solution<T>> solutions) {
         if (level == tupleSize) {
             return 0;
         }
 
         // these solutions stay on the stack, but the current term is a variable which binds to previous solutions,
         // a cross-product of solutions will also be added to the stack
-        int added = bindAndSolve(matchedSolution, pattern, tuple, level + 1, tupleSize, solutions);
+        int added = bindAndSolve(matchedSolution, pattern, tuple, level + 1, solutions);
 
-        String var = pattern.getTerms()[level].getVariable();
+        String var = pattern[level].getVariable();
         if (null == var) {
             return added;
         } else {
             int count = added;
 
-            T value = tuple.getElements()[level];
+            T value = tuple[level];
             Iterator<Solution<T>> iter = getSolutions(var, value);
             if (null != iter) {
                 // helper stack avoids random access into the solution stack
@@ -110,13 +137,13 @@ public class SolutionIndex<T> {
 
                 while (iter.hasNext()) {
                     Solution<T> ps = iter.next();
-                    if (matchedSolution.complements(ps, queryVariables)) {
+                    if (matchedSolution.composableWith(ps, queryVariables)) {
                         // create a copy of the mutable object provided by the iterator
                         solutions.push(new Solution<T>(ps));
                         count++;
 
                         for (Solution<T> lower : helper) {
-                            if (ps.complements(lower, queryVariables)) {
+                            if (ps.composableWith(lower, queryVariables)) {
                                 Solution<T> lowerComposed = new Solution<T>(totalPatterns, ps, lower);
                                 solutions.push(lowerComposed);
                                 count++;
@@ -137,7 +164,14 @@ public class SolutionIndex<T> {
         }
     }
 
-    public long removeExpiredSolutions(final long now) {
+    /**
+     * Removes all expired solutions from this index.
+     * This is an exhaustive, top-down operation which takes a relatively large amount of time.
+     *
+     * @param now the current time, in milliseconds since the Unix epoch
+     * @return the number of solutions removed
+     */
+    public int removeExpired(final long now) {
         int removedSolutions = 0;
 
         Collection<SolutionGroup<T>> toRemove = new LinkedList<SolutionGroup<T>>();
@@ -156,7 +190,7 @@ public class SolutionIndex<T> {
         }
 
         for (SolutionGroup<T> g : toRemove) {
-            VariableBindings<T> bindings = g.getBindings();
+            Bindings<T> bindings = g.getBindings();
             for (Map.Entry<String, T> e : bindings.entrySet()) {
                 GroupIndex<T> gi = getGroupIndex(e.getKey(), e.getValue());
                 if (null != gi) {
@@ -173,6 +207,22 @@ public class SolutionIndex<T> {
         }
 
         return removedSolutions;
+    }
+
+    private void add(final String variable, final T value, final Solution<T> ps, final long now) {
+        Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(variable);
+        if (null == byVariable) {
+            byVariable = new HashMap<T, GroupIndex<T>>();
+            solutionsByBinding.put(variable, byVariable);
+        }
+
+        GroupIndex<T> byValue = byVariable.get(value);
+        if (null == byValue) {
+            byValue = new GroupIndex<T>();
+            byVariable.put(value, byValue);
+        }
+
+        byValue.add(ps, now);
     }
 
     private GroupIndex<T> getGroupIndex(final String variable, final T value) {

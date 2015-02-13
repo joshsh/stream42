@@ -2,7 +2,7 @@ package edu.rpi.twc.sesamestream.impl;
 
 import edu.rpi.twc.sesamestream.BindingSetHandler;
 import edu.rpi.twc.sesamestream.Subscription;
-import edu.rpi.twc.sesamestream.tuple.GraphPattern;
+import edu.rpi.twc.sesamestream.tuple.Query;
 import org.openrdf.model.Value;
 
 /**
@@ -11,8 +11,8 @@ import org.openrdf.model.Value;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SubscriptionImpl implements Subscription {
-    private final Query query;
-    private final GraphPattern<Value> graphPattern;
+    private final SparqlQuery sparqlQuery;
+    private final Query<Value> query;
     private final BindingSetHandler handler;
     private final QueryEngineImpl queryEngine;
 
@@ -22,12 +22,12 @@ public class SubscriptionImpl implements Subscription {
 
     private final String id;
 
-    public SubscriptionImpl(final Query query,
-                            final GraphPattern<Value> graphPattern,
+    public SubscriptionImpl(final SparqlQuery sparqlQuery,
+                            final Query<Value> query,
                             final BindingSetHandler handler,
                             final QueryEngineImpl queryEngine) {
+        this.sparqlQuery = sparqlQuery;
         this.query = query;
-        this.graphPattern = graphPattern;
         this.handler = handler;
         this.queryEngine = queryEngine;
 
@@ -53,7 +53,7 @@ public class SubscriptionImpl implements Subscription {
     }
 
     @Override
-    public boolean renew(long ttl) {
+    public boolean renew(int ttl) {
         if (isActive()) {
             queryEngine.renew(this, ttl);
             return true;
@@ -65,15 +65,15 @@ public class SubscriptionImpl implements Subscription {
     /**
      * @return the SPARQL query which has been registered in the {@link QueryEngineImpl}
      */
-    public Query getQuery() {
-        return query;
+    public SparqlQuery getSparqlQuery() {
+        return sparqlQuery;
     }
 
     /**
      * @return the graph pattern which has been indexed in the forward-chaining tuple store implementation
      */
-    public GraphPattern<Value> getGraphPattern() {
-        return graphPattern;
+    public Query<Value> getQuery() {
+        return query;
     }
 
     /**

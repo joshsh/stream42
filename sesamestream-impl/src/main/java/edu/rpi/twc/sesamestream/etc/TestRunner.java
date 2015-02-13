@@ -36,7 +36,7 @@ import java.util.List;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class TestRunner {
-    private static long QUERY_TTL = 0;
+    private static final int TUPLE_TTL = 0, QUERY_TTL = 0;
 
     public static void main(final String[] args) throws Exception {
         if (2 != args.length) {
@@ -57,8 +57,6 @@ public class TestRunner {
     private static void doRun(final List<String> queryFiles,
                               final List<String> dataFiles)
             throws IOException, MalformedQueryException, QueryEngine.IncompatibleQueryException, RDFHandlerException {
-
-        long ttl = 0;
 
         QueryEngineImpl engine = new QueryEngineImpl();
         QueryParser queryParser = new SPARQLParser();
@@ -106,7 +104,7 @@ public class TestRunner {
             }
 
             //StatementListBuilder h = new StatementListBuilder();
-            RDFHandler h = new QueryEngineAdder(engine, ttl);
+            RDFHandler h = new QueryEngineAdder(engine, TUPLE_TTL);
 
             InputStream in = new FileInputStream(new File(f));
             try {

@@ -16,21 +16,21 @@ import static org.junit.Assert.assertTrue;
 public class SolutionGroupTest {
     private long now;
     private long exp = 0;
-    GraphPattern.QueryVariables vars;
+    Query.QueryVariables vars;
     Map<String, String> bindingMap;
-    VariableBindings<String> bindings;
+    Bindings<String> bindings;
 
     @Before
     public void setUp() throws Exception {
         now = System.currentTimeMillis();
 
-        vars = new GraphPattern.QueryVariables(Arrays.asList("x", "y", "z"));
+        vars = new Query.QueryVariables(Arrays.asList("x", "y", "z"));
 
         bindingMap = new HashMap<String, String>();
         bindingMap.put("x", "red");
         bindingMap.put("y", "green");
         bindingMap.put("z", "blue");
-        bindings = new VariableBindings<String>(bindingMap, vars);
+        bindings = new Bindings<String>(bindingMap, vars);
     }
 
     @Test

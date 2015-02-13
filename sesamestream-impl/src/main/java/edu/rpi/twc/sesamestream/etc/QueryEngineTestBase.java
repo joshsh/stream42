@@ -44,7 +44,7 @@ public class QueryEngineTestBase {
     protected QueryEngineImpl queryEngine;
     protected ValueFactory vf = new ValueFactoryImpl();
 
-    protected final long TUPLE_TTL = 0, QUERY_TTL = 0;
+    protected final int TUPLE_TTL = 0, QUERY_TTL = 0;
 
     protected BindingSetHandler simpleBindingSetHandler = new BindingSetHandler() {
         public void handle(final BindingSet result) {

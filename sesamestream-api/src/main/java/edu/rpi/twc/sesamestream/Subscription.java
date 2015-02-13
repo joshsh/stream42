@@ -30,5 +30,5 @@ public interface Subscription {
      * @param ttl the new time-to-live in milliseconds, or 0 for inifinite time-to-live
      * @return whether the subscription was successfully renewed
      */
-    boolean renew(long ttl);
+    boolean renew(int ttl);
 }

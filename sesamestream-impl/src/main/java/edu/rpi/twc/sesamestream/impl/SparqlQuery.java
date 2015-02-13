@@ -2,8 +2,8 @@ package edu.rpi.twc.sesamestream.impl;
 
 import edu.rpi.twc.sesamestream.QueryEngine;
 import edu.rpi.twc.sesamestream.tuple.LList;
+import edu.rpi.twc.sesamestream.tuple.Query;
 import edu.rpi.twc.sesamestream.tuple.Term;
-import edu.rpi.twc.sesamestream.tuple.TuplePattern;
 import org.openrdf.model.Value;
 import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Distinct;
@@ -40,14 +40,14 @@ import java.util.logging.Logger;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class Query {
-    private static final Logger logger = Logger.getLogger(Query.class.getName());
+public class SparqlQuery {
+    private static final Logger logger = Logger.getLogger(SparqlQuery.class.getName());
 
     // note: preserves order of variables for the sake of ordering solution bindings accordingly
     private final LinkedHashSet<String> bindingNames;
 
     private Map<String, String> extendedBindingNames;
-    private LList<TuplePattern<Value>> triplePatterns;
+    private LList<Term<Value>[]> triplePatterns;
     private List<Filter> filters;
     private Map<String, Value> constants;
 
@@ -62,7 +62,7 @@ public class Query {
 
     private final QueryForm queryForm;
 
-    public Query(final TupleExpr expr)
+    public SparqlQuery(final TupleExpr expr)
             throws QueryEngine.IncompatibleQueryException {
 
         bindingNames = new LinkedHashSet<String>();
@@ -92,12 +92,12 @@ public class Query {
         }
     }
 
-    private TuplePattern<Value> toNative(StatementPattern sp) {
+    private Term<Value>[] toNative(StatementPattern sp) {
         // note: assumes tupleSize==3
-        return new TuplePattern<Value>(new Term[]{
+        return new Term[]{
                 toNative(sp.getSubjectVar()),
                 toNative(sp.getPredicateVar()),
-                toNative(sp.getObjectVar())});
+                toNative(sp.getObjectVar())};
     }
 
     private Term<Value> toNative(Var v) {
@@ -153,7 +153,7 @@ public class Query {
         extendedBindingNames.put(from, to);
     }
 
-    public LList<TuplePattern<Value>> getTriplePatterns() {
+    public LList<Term<Value>[]> getTriplePatterns() {
         return triplePatterns;
     }
 

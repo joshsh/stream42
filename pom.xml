@@ -14,7 +14,7 @@
     <version>1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>SesameStream</name>
-    <description>Continuous queries for Sesame</description>
+    <description>Continuous SPARQL query framework</description>
     <url>https://github.com/joshsh/sesamestream</url>
 
     <issueManagement>
@@ -45,11 +45,11 @@
     </developers>
 
     <properties>
-        <junit.version>4.5</junit.version>
-        <ripple.version>1.2-SNAPSHOT</ripple.version>
-        <sesame.version>2.7.10</sesame.version>
+        <junit.version>4.12</junit.version>
+        <ripple.version>1.2</ripple.version>
+        <sesame.version>2.7.14</sesame.version>
         <sesamestream.version>1.1-SNAPSHOT</sesamestream.version>
-        <sesametools.version>1.9-SNAPSHOT</sesametools.version>
+        <sesametools.version>1.9</sesametools.version>
     </properties>
 
     <modules>
@@ -157,14 +157,5 @@
             </plugins>
         </pluginManagement>
     </build>
-
-    <repositories>
-        <!-- temporary; as of Ripple 1.2, all dependencies should be available in the central repository -->
-        <repository>
-            <id>fortytwo</id>
-            <name>fortytwo.net Maven repository</name>
-            <url>http://fortytwo.net/maven2</url>
-        </repository>
-    </repositories>
 
 </project>
