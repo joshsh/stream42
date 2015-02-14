@@ -4,14 +4,18 @@ import edu.rpi.twc.sesamestream.BindingSetHandler;
 import edu.rpi.twc.sesamestream.QueryEngine;
 import edu.rpi.twc.sesamestream.SesameStream;
 import edu.rpi.twc.sesamestream.Subscription;
-import edu.rpi.twc.sesamestream.tuple.Query;
+import edu.rpi.twc.sesamestream.tuple.Bindings;
 import edu.rpi.twc.sesamestream.tuple.LList;
+import edu.rpi.twc.sesamestream.tuple.Query;
 import edu.rpi.twc.sesamestream.tuple.QueryIndex;
 import edu.rpi.twc.sesamestream.tuple.Term;
-import edu.rpi.twc.sesamestream.tuple.Bindings;
+import net.fortytwo.flow.NullSink;
+import net.fortytwo.flow.Sink;
+import net.fortytwo.flow.rdf.RDFSink;
 import net.fortytwo.linkeddata.CacheEntry;
 import net.fortytwo.linkeddata.LinkedDataCache;
 import net.fortytwo.ripple.RippleException;
+import org.openrdf.model.Namespace;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
@@ -26,6 +30,8 @@ import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.impl.MapBindingSet;
 import org.openrdf.query.parser.ParsedQuery;
 import org.openrdf.query.parser.QueryParserUtil;
+import org.openrdf.rio.RDFHandler;
+import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.sail.Sail;
 import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailException;
@@ -227,6 +233,61 @@ public class QueryEngineImpl implements QueryEngine {
         for (Statement s : statements) {
             addStatement(ttl, s);
         }
+    }
+
+    public RDFHandler createRDFHandler(final int ttl) {
+        return new RDFHandler() {
+            public void startRDF() throws RDFHandlerException {
+                // do nothing
+            }
+
+            public void endRDF() throws RDFHandlerException {
+                // do nothing
+            }
+
+            public void handleNamespace(String s, String s1) throws RDFHandlerException {
+                // do nothing
+            }
+
+            public void handleStatement(Statement s) throws RDFHandlerException {
+                try {
+                    addStatements(ttl, s);
+                } catch (Throwable t) {
+                    throw new RDFHandlerException(t);
+                }
+            }
+
+            public void handleComment(String s) throws RDFHandlerException {
+                // do nothing
+            }
+        };
+    }
+
+    public RDFSink createRDFSink(final int ttl) {
+        return new RDFSink() {
+            @Override
+            public Sink<Statement> statementSink() {
+                return new Sink<Statement>() {
+                    public void put(final Statement s) throws RippleException {
+                        try {
+                            addStatements(ttl, s);
+                        } catch (Throwable t) {
+                            throw new RippleException(t);
+                        }
+                    }
+                };
+            }
+
+            @Override
+            public Sink<Namespace> namespaceSink() {
+                return new NullSink<Namespace>();
+            }
+
+            @Override
+            public Sink<String> commentSink() {
+                return new NullSink<String>();
+            }
+        };
     }
 
     private void addStatement(final int ttl, final Statement s) {

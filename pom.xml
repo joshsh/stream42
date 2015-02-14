@@ -55,6 +55,7 @@
     <modules>
         <module>sesamestream-api</module>
         <module>sesamestream-impl</module>
+        <module>sesamestream-examples</module>
     </modules>
 
     <build>
