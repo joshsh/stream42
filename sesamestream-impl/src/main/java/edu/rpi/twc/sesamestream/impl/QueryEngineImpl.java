@@ -217,7 +217,19 @@ public class QueryEngineImpl implements QueryEngine {
         return s;
     }
 
-    public void addStatement(final int ttl, final Statement s) {
+    public void addStatements(final int ttl, final Statement... statements) {
+        for (Statement s : statements) {
+            addStatement(ttl, s);
+        }
+    }
+
+    public void addStatements(final int ttl, final Collection<Statement> statements) {
+        for (Statement s : statements) {
+            addStatement(ttl, s);
+        }
+    }
+
+    private void addStatement(final int ttl, final Statement s) {
         increment(countStatements, false);
         long now = System.currentTimeMillis();
         timeCurrentOperationBegan = now;
@@ -232,18 +244,6 @@ public class QueryEngineImpl implements QueryEngine {
         }
 
         logEntry();
-    }
-
-    public void addStatements(final int ttl, final Statement... statements) {
-        for (Statement s : statements) {
-            addStatement(ttl, s);
-        }
-    }
-
-    public void addStatements(final int ttl, final Collection<Statement> statements) {
-        for (Statement s : statements) {
-            addStatement(ttl, s);
-        }
     }
 
     private void register(final SubscriptionImpl subscription) {
@@ -288,7 +288,8 @@ public class QueryEngineImpl implements QueryEngine {
             tPatterns = tPatterns.getRest();
         }
 
-        return new Query<Value>(patterns, now + 1000L * ttl);
+        long expirationTime = 0 == ttl ? 0 : now + 1000L * ttl;
+        return new Query<Value>(patterns, expirationTime);
     }
 
     private void triggerLinkedDataCache(final Value[] tuple) {

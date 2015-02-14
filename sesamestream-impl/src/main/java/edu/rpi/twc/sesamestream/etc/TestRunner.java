@@ -104,7 +104,7 @@ public class TestRunner {
             }
 
             //StatementListBuilder h = new StatementListBuilder();
-            RDFHandler h = new QueryEngineAdder(engine, TUPLE_TTL);
+            RDFHandler h = new StatementAdder(engine, TUPLE_TTL);
 
             InputStream in = new FileInputStream(new File(f));
             try {

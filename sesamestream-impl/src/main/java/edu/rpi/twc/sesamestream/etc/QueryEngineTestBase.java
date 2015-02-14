@@ -148,7 +148,7 @@ public class QueryEngineTestBase {
         }
 
         for (Statement s : data) {
-            queryEngine.addStatement(TUPLE_TTL, s);
+            queryEngine.addStatements(TUPLE_TTL, s);
         }
 
         return answers;
@@ -173,7 +173,7 @@ public class QueryEngineTestBase {
         queryEngine.addQuery(QUERY_TTL, query, h);
 
         for (Statement s : data) {
-            queryEngine.addStatement(TUPLE_TTL, s);
+            queryEngine.addStatements(TUPLE_TTL, s);
         }
 
         Set<BindingSet> distinct = new HashSet<BindingSet>();

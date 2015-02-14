@@ -68,7 +68,8 @@ public class QueryIndex<T> {
         String id = rootMetadata.add(query);
         query.setId(id);
 
-        int i = 0;
+        logger.fine("adding query " + id);
+
         for (Query.PatternInQuery<T> p : query.getPatterns()) {
             if (rootMetadata.tupleSize != p.getTerms().length) {
                 throw new IllegalArgumentException("tuple pattern is not of expected length " + rootMetadata.tupleSize);
@@ -85,6 +86,8 @@ public class QueryIndex<T> {
      * @param query the query to remove
      */
     public synchronized void remove(final Query<T> query) {
+        logger.fine("removing query " + query.getId());
+
         if (rootMetadata.remove(query)) {
             for (Query.PatternInQuery<T> p : query.getPatterns()) {
                 remove(p, 0);
@@ -160,19 +163,22 @@ public class QueryIndex<T> {
         int removedQueries = 0;
         int removedSolutions = 0;
 
+        // identify expired queries
         Collection<Query<T>> toRemove = new LinkedList<Query<T>>();
-        for (Query<T> gp : rootMetadata.queries) {
-            if (gp.isExpired(now)) {
-                toRemove.add(gp);
+        for (Query<T> query : rootMetadata.queries) {
+            if (query.isExpired(now)) {
+                toRemove.add(query);
             }
         }
-        for (Query<T> gp : toRemove) {
-            remove(gp);
+        // remove expired queries
+        for (Query<T> query : toRemove) {
+            remove(query);
             removedQueries++;
         }
 
-        for (Query<T> gp : rootMetadata.queries) {
-            SolutionIndex<T> index = gp.getSolutionIndex();
+        // for the remaining queries, remove expired solutions
+        for (Query<T> query : rootMetadata.queries) {
+            SolutionIndex<T> index = query.getSolutionIndex();
             removedSolutions += index.removeExpired(now);
         }
 

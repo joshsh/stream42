@@ -13,33 +13,37 @@ import java.io.IOException;
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class QueryEngineAdder implements RDFHandler {
+public class StatementAdder implements RDFHandler {
     private final QueryEngine queryEngine;
     private final int ttl;
 
-    public QueryEngineAdder(final QueryEngine queryEngine,
-                            final int ttl) {
+    public StatementAdder(final QueryEngine queryEngine,
+                          final int ttl) {
         this.queryEngine = queryEngine;
         this.ttl = ttl;
     }
 
     public void startRDF() throws RDFHandlerException {
+        // do nothing
     }
 
     public void endRDF() throws RDFHandlerException {
+        // do nothing
     }
 
     public void handleNamespace(String s, String s1) throws RDFHandlerException {
+        // do nothing
     }
 
     public void handleStatement(Statement s) throws RDFHandlerException {
         try {
-            queryEngine.addStatement(ttl, s);
+            queryEngine.addStatements(ttl, s);
         } catch (IOException e) {
             throw new RDFHandlerException(e);
         }
     }
 
     public void handleComment(String s) throws RDFHandlerException {
+        // do nothing
     }
 }

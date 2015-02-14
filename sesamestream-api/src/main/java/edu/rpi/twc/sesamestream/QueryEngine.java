@@ -37,22 +37,6 @@ public interface QueryEngine {
             throws IOException, IncompatibleQueryException, InvalidQueryException;
 
     /**
-     * Adds a new statement to this query engine.
-     * Depending on the queries registered with this engine,
-     * the statement will either be discarded as irrelevant to the queries,
-     * trigger the creation of partial solutions which are stored in anticipation of further statements,
-     * or trigger the production query answers.
-     *
-     * @param ttl the time-to-live of the added statement, in seconds.
-     *            If ttl > 0, any partial solutions which are computed in response to the statement have a finite
-     *            lifetime, and will expire from the index at the end of that lifetime.
-     * @param statement the statement to add
-     * @throws IOException if there is a problem communicating with this query engine
-     * (for example, if there are network operations involved)
-     */
-    void addStatement(int ttl, Statement statement) throws IOException;
-
-    /**
      * Adds new statements to this query engine.
      * Depending on the queries registered with this engine,
      * the statements will either be discarded as irrelevant to the queries,

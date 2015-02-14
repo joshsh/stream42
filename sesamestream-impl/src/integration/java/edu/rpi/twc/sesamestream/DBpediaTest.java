@@ -43,7 +43,7 @@ public class DBpediaTest extends QueryEngineTestBase {
                 break;
             }
 
-            queryEngine.addStatement(TUPLE_TTL, st);
+            queryEngine.addStatements(TUPLE_TTL, st);
         }
 
         //queryEngine.getIndex().print();
