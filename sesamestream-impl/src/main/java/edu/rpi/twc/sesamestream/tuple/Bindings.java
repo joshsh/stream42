@@ -12,7 +12,7 @@ import java.util.Set;
 public class Bindings<T> {
     private final Map<String, T> map;
 
-    // bit field
+    // bit field; bits for bound variables are 1, unbound variables 0 in order defined by the query
     private final int boundVariables;
 
     private Long hash;

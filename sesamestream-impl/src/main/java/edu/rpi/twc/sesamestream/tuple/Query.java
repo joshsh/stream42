@@ -208,6 +208,28 @@ public class Query<T> implements Comparable<Query<T>> {
                 return i;
             }
         }
+
+        /**
+         * Finds the set of bindings created by pairing the variables in the given pattern with the corresponding
+         * elements of the given tuple
+         *
+         * @param pattern a tuple pattern
+         * @param tuple a tuple
+         * @param <T> the value tupe
+         * @return the set of bindings created by pairing the variables in the given pattern with the corresponding
+         * elements of the given tuple
+         */
+        public <T> Bindings<T> bind(final Term<T>[] pattern, final T[] tuple) {
+            Map<String, T> bindings = new HashMap<String, T>();
+            for (int i = 0; i < pattern.length; i++) {
+                String v = pattern[i].getVariable();
+                if (null != v) {
+                    bindings.put(v, tuple[i]);
+                }
+            }
+
+            return new Bindings<T>(bindings, this);
+        }
     }
 
     /**

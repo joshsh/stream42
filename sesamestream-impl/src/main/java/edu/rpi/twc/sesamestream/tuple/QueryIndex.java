@@ -143,9 +143,11 @@ public class QueryIndex<T> {
         // applied to the tuple.
         // Do not allow solutions created while processing one tuple pattern to be accessible while processing
         // the next.
-        boolean changed = add(tuple, 0, rootMetadata, expirationTime);
+        boolean changed = add(tuple, 0, rootMetadata, expirationTime, now);
 
         produceSolutions(handler, rootMetadata, now);
+
+        rootMetadata.clearSolutionMetadata();
 
         return changed;
     }
@@ -246,80 +248,46 @@ public class QueryIndex<T> {
     private boolean add(final T[] tuple,
                         final int level,
                         final RootMetadata<T> meta,
-                        final long expirationTime) {
+                        final long expirationTime,
+                        final long now) {
         boolean changed = false;
 
         if (meta.tupleSize == level) {
             for (Query.PatternInQuery<T> pattern : patterns) {
-                add(pattern, tuple, meta, expirationTime);
+                Stack<Solution<T>> solutions = new Stack<Solution<T>>();
+
+                Bindings<T> b = pattern.getQuery().getVariables().bind(pattern.getTerms(), tuple);
+
+                // create a new partial solution
+                Solution<T> matchedSolution = new Solution<T>(
+                        pattern.getQuery().getPatterns().size(), pattern.getIndex(), b, expirationTime);
+
+                pattern.getQuery().getSolutionIndex().joinSolutions(
+                        matchedSolution, b, solutions, meta.helperStack, now);
+
+                // prepare for the solution-production phase
+                pattern.getQuery().getSolutionHashes().clear();
+
+                TuplePatternSolutions<T> ts = new TuplePatternSolutions<T>();
+                ts.pattern = pattern;
+                ts.solutions = solutions;
+                meta.tpSolutions.add(ts);
                 changed = true;
             }
         } else {
             if (null != wildcardIndex) {
-                changed = wildcardIndex.add(tuple, level + 1, meta, expirationTime);
+                changed = wildcardIndex.add(tuple, level + 1, meta, expirationTime, now);
             }
 
             if (null != valueIndexes) {
                 QueryIndex<T> idx = valueIndexes.get(tuple[level]);
                 if (null != idx) {
-                    changed |= idx.add(tuple, level + 1, meta, expirationTime);
+                    changed |= idx.add(tuple, level + 1, meta, expirationTime, now);
                 }
             }
         }
 
         return changed;
-    }
-
-    private void add(final Query.PatternInQuery<T> pattern,
-                     final T[] tuple,
-                     final RootMetadata<T> meta,
-                     final long expirationTime) {
-        Map<String, T> bindings = new HashMap<String, T>();
-        for (int i = 0; i < meta.tupleSize; i++) {
-            String v = pattern.getTerms()[i].getVariable();
-            if (null != v) {
-                bindings.put(v, tuple[i]);
-            }
-        }
-        Bindings<T> b = new Bindings<T>(bindings, pattern.getQuery().getVariables());
-
-        // create a new partial solution
-        Solution<T> solutionMatched = new Solution<T>(
-                pattern.getQuery().getPatterns().size(), pattern.getIndex(), b, expirationTime);
-
-        TuplePatternSolutions<T> ts = bindAndSolve(solutionMatched, pattern, tuple, meta);
-        meta.tpSolutions.add(ts);
-    }
-
-    private TuplePatternSolutions<T> bindAndSolve(final Solution<T> matchedSolution,
-                                                  final Query.PatternInQuery<T> pattern,
-                                                  final T[] tuple,
-                                                  final RootMetadata<T> meta) {
-        TuplePatternSolutions<T> ts = new TuplePatternSolutions<T>();
-        ts.pattern = pattern;
-        ts.solutions = new Stack<Solution<T>>();
-
-        meta.helperStack.clear();
-
-        pattern.getQuery().getSolutionIndex().bindAndSolve(
-                matchedSolution, pattern.getTerms(), tuple, meta.helperStack);
-
-        Query.QueryVariables vars = pattern.getQuery().getVariables();
-        int totalPatterns = pattern.getQuery().getPatterns().size();
-        for (Solution<T> ps : meta.helperStack) {
-            if (matchedSolution.composableWith(ps, vars)) {
-                ts.solutions.push(new Solution<T>(totalPatterns, matchedSolution, ps));
-            }
-        }
-
-        // add the original partial solution.  It will only be indexed if it is not contained within some other
-        // solution produced in this phase.
-        ts.solutions.push(matchedSolution);
-
-        // prepare for the solution-production phase
-        pattern.getQuery().getSolutionHashes().clear();
-
-        return ts;
     }
 
     private void produceSolutions(final SolutionHandler<T> handler,
@@ -329,24 +297,24 @@ public class QueryIndex<T> {
             SolutionIndex<T> solutionIndex = ts.pattern.getQuery().getSolutionIndex();
             Set<Long> hashes = ts.pattern.getQuery().getSolutionHashes();
 
-            for (Solution<T> ps : ts.solutions) {
+            for (Solution<T> s : ts.solutions) {
                 // if the join is a complete solution, handle it as such,
                 // provided that an identical solution has not already been produced in response to the current tuple.
-                if (ps.isComplete()) {
-                    long hash = ps.getBindings().getHash();
+                if (s.isComplete()) {
+                    long hash = s.getBindings().getHash();
                     if (hashes.contains(hash)) {
                         continue;
                     }
                     hashes.add(hash);
 
-                    handler.handle(ts.pattern.getQuery().getId(), ps.getBindings());
+                    handler.handle(ts.pattern.getQuery().getId(), s.getBindings());
                 }
 
-                solutionIndex.add(ps, now);
+                // Add both complete and incomplete solutions to the solution index.
+                // The awareness of complete solutions potentially saves work, as contained solutions are abandoned.
+                solutionIndex.add(s, now);
             }
         }
-
-        meta.clearSolutionMetadata();
     }
 
     /**
@@ -372,7 +340,7 @@ public class QueryIndex<T> {
         private final PriorityQueue<Query<T>> queries = new PriorityQueue<Query<T>>();
         private final Collection<TuplePatternSolutions<T>> tpSolutions = new LinkedList<TuplePatternSolutions<T>>();
         private final Stack<Solution<T>> helperStack = new Stack<Solution<T>>();
-        private int patternCount = 0;
+        private int queryIdCount = 0;
 
         private RootMetadata(final int tupleSize) {
             this.tupleSize = tupleSize;
@@ -385,12 +353,11 @@ public class QueryIndex<T> {
 
         public void clearSolutionMetadata() {
             tpSolutions.clear();
-            helperStack.clear();
         }
 
         public String add(final Query<T> query) {
             queries.add(query);
-            return "gp" + (++patternCount);
+            return "q" + (++queryIdCount);
         }
 
         public boolean remove(final Query<T> query) {

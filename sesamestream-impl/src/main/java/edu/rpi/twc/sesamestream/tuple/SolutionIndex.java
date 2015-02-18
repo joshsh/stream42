@@ -23,7 +23,7 @@ public class SolutionIndex<T> {
      *
      * @param queryVariables the variables of the query for which this is an index
      * @param totalPatterns  the total number of tuple patterns in the query for which this is an index
-     * @param tupleSize the size of the tuples matched in the corresponding query index
+     * @param tupleSize      the size of the tuples matched in the corresponding query index
      */
     public SolutionIndex(final Query.QueryVariables queryVariables,
                          final int totalPatterns,
@@ -48,22 +48,24 @@ public class SolutionIndex<T> {
     }
 
     /**
-     * Retrieves all solutions for a given variable/value pair
+     * Retrieves all unexpired solutions for a given variable/value pair
      *
      * @param variable a query variable
      * @param value    a value bound to a query variable
+     * @param now      the current time, in milliseconds since the Unix epoch
      * @return an iterator over all solutions to the query which contain the given binding
      */
-    public Iterator<Solution<T>> getSolutions(final String variable, final T value) {
+    public Iterator<Solution<T>> getSolutions(final String variable, final T value, final long now) {
         GroupIndex<T> g = getGroupIndex(variable, value);
-        return null == g ? null : new SolutionIterator<T>(g.groups.values().iterator());
+        return null == g ? null : new SolutionIterator<T>(g.groups.values().iterator(), now);
     }
 
     // note: used only in unit tests
     public Iterator<Solution<T>> getComposableSolutions(final String variable,
                                                         final T value,
-                                                        final Solution<T> ps) {
-        Iterator<Solution<T>> iter = getSolutions(variable, value);
+                                                        final Solution<T> ps,
+                                                        final long now) {
+        Iterator<Solution<T>> iter = getSolutions(variable, value, now);
         return null == iter ? null : new FilteredIterator<Solution<T>, Solution<T>>(iter) {
             @Override
             protected Solution<T> test(final Solution<T> element) {
@@ -75,8 +77,9 @@ public class SolutionIndex<T> {
     // note: used only in unit tests
     public Iterator<Solution<T>> composeSolutions(final String variable,
                                                   final T value,
-                                                  final Solution<T> ps) {
-        Iterator<Solution<T>> iter = getSolutions(variable, value);
+                                                  final Solution<T> ps,
+                                                  final long now) {
+        Iterator<Solution<T>> iter = getSolutions(variable, value, now);
         return null == iter ? null : new FilteredIterator<Solution<T>, Solution<T>>(iter) {
             @Override
             protected Solution<T> test(final Solution<T> element) {
@@ -88,79 +91,54 @@ public class SolutionIndex<T> {
     }
 
     /**
-     * A complex operation which joins all possible solutions according to the bindings created when a tuple
-     * pattern matches a tuple.
-     * Only self-consistent and non-expired solutions are produced.
+     * Finds the result of joining composable combinations of an original solution together with all
+     * unexpired solutions containing any of a provided set of bindings.
      *
      * @param matchedSolution the initial solution produced by matching the tuple pattern against the tuple
-     * @param pattern the matching tuple pattern
-     * @param tuple the matched tuple
-     * @param solutions a stack of solutions to which the solutions retrieved or produced
-     *                  in this operation will be added
-     * @return the number of solutions added to the stack. Note that solutions are not necessarily unique.
+     * @param bindings        a set of bindings
+     * @param solutions       a stack of solutions which will be cleared, and to which solutions will be added
+     * @param helper          a secondary stack for use in computation. It will be cleared.
      */
-    public int bindAndSolve(final Solution<T> matchedSolution,
-                            final Term<T>[] pattern,
-                            final T[] tuple,
-                            final Stack<Solution<T>> solutions) {
-        return bindAndSolve(matchedSolution, pattern, tuple, 0, solutions);
-    }
+    public void joinSolutions(final Solution<T> matchedSolution,
+                              final Bindings<T> bindings,
+                              final Stack<Solution<T>> solutions,
+                              final Stack<Solution<T>> helper,
+                              final long now) {
+        solutions.clear();
+        helper.clear();
 
-    private int bindAndSolve(final Solution<T> matchedSolution,
-                             final Term<T>[] pattern,
-                             final T[] tuple,
-                             final int level,
-                             final Stack<Solution<T>> solutions) {
-        if (level == tupleSize) {
-            return 0;
-        }
+        // the original solution is among the solutions produced, and all others must be composable with it.
+        // We assume that it is unexpired.
+        solutions.push(matchedSolution);
 
-        // these solutions stay on the stack, but the current term is a variable which binds to previous solutions,
-        // a cross-product of solutions will also be added to the stack
-        int added = bindAndSolve(matchedSolution, pattern, tuple, level + 1, solutions);
+        // For each binding pair, we retrieve matching solutions from the index, add them to the solutions produced,
+        // and also join them with all solutions produced in previous steps, including the original solution.
+        for (Map.Entry<String, T> e : bindings.entrySet()) {
+            String var = e.getKey();
+            T value = e.getValue();
+            Iterator<Solution<T>> retrieved = getSolutions(var, value, now);
 
-        String var = pattern[level].getVariable();
-        if (null == var) {
-            return added;
-        } else {
-            int count = added;
+            if (null != retrieved && retrieved.hasNext()) {
+                while (retrieved.hasNext()) {
+                    Solution<T> retrievedSolution = retrieved.next();
+                    if (matchedSolution.composableWith(retrievedSolution, queryVariables)) {
+                        // note: this incidentally allows us to discard the mutable object provided by the iterator
+                        Solution<T> composedSolution
+                                = new Solution<T>(totalPatterns, matchedSolution, retrievedSolution);
+                        helper.push(composedSolution);
 
-            T value = tuple[level];
-            Iterator<Solution<T>> iter = getSolutions(var, value);
-            if (null != iter) {
-                // helper stack avoids random access into the solution stack
-                // TODO: eliminate or re-use this
-                Stack<Solution<T>> helper = new Stack<Solution<T>>();
-                for (int i = 0; i < added; i++) {
-                    helper.push(solutions.pop());
-                }
-
-                while (iter.hasNext()) {
-                    Solution<T> ps = iter.next();
-                    if (matchedSolution.composableWith(ps, queryVariables)) {
-                        // create a copy of the mutable object provided by the iterator
-                        solutions.push(new Solution<T>(ps));
-                        count++;
-
-                        for (Solution<T> lower : helper) {
-                            if (ps.composableWith(lower, queryVariables)) {
-                                Solution<T> lowerComposed = new Solution<T>(totalPatterns, ps, lower);
-                                solutions.push(lowerComposed);
-                                count++;
+                        for (Solution<T> s : solutions) {
+                            if (retrievedSolution.composableWith(s, queryVariables)) {
+                                helper.push(new Solution<T>(totalPatterns, retrievedSolution, s));
                             }
                         }
                     }
                 }
 
                 while (!helper.isEmpty()) {
-                    // put the lower-level solution back on the solution stack.
-                    // It is a candidate solution in is own right, before composition with the variable-bound
-                    // solutions.
                     solutions.push(helper.pop());
                 }
             }
-
-            return count;
         }
     }
 
@@ -260,10 +238,13 @@ public class SolutionIndex<T> {
         private final Iterator<SolutionGroup<T>> groupIterator;
         private LList<SolutionPattern> currentSolutions;
         private boolean advanced;
+        private final long now;
 
         // note: assumes a non-empty iterator of groups
-        public SolutionIterator(final Iterator<SolutionGroup<T>> groupIterator) {
+        public SolutionIterator(final Iterator<SolutionGroup<T>> groupIterator,
+                                final long now) {
             this.groupIterator = groupIterator;
+            this.now = now;
         }
 
         @Override
@@ -297,14 +278,14 @@ public class SolutionIndex<T> {
 
         private void advance() {
             if (null != currentSolutions) {
-                currentSolutions = currentSolutions.getRest();
+                setCurrentSolutions(currentSolutions.getRest());
             }
 
             // note: the loop tolerates empty groups, although these should not occur
             while (null == currentSolutions || currentSolutions.isNil()) {
                 if (groupIterator.hasNext()) {
                     SolutionGroup<T> g = groupIterator.next();
-                    currentSolutions = g.getSolutions();
+                    setCurrentSolutions(g.getSolutions());
                     // update the bindings of the current solution whenever we enter a new group
                     solution.setBindings(g.getBindings());
                 } else {
@@ -313,6 +294,15 @@ public class SolutionIndex<T> {
             }
 
             advanced = true;
+        }
+
+        private void setCurrentSolutions(final LList<SolutionPattern> sols) {
+            currentSolutions = sols;
+
+            // skip expired solutions.  For now, we don't remove them, as we don't want empty groups and indices.
+            while (!currentSolutions.isNil() && currentSolutions.getValue().isExpired(now)) {
+                currentSolutions = currentSolutions.getRest();
+            }
         }
     }
 

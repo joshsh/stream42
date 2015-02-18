@@ -30,7 +30,7 @@ public class BasicExample {
                 "}";
 
         // An RDF graph representing an event. Normally, this would come from a dynamic data source.
-        // The example is from the Typeatron keyer (see http://github.com/joshsh/extendo)
+        // The example is from the Typeatron keyer (see http://github.com/joshsh/extendo).
         String eventData = "@prefix activity: <http://fortytwo.net/2015/extendo/activity#> .\n" +
                 "@prefix dbr: <http://dbpedia.org/resource/> .\n" +
                 "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
@@ -62,7 +62,7 @@ public class BasicExample {
         // Submit the query to the query engine to obtain a subscription.
         Subscription sub = queryEngine.addQuery(queryTtl, query, handler);
 
-        // create subscriptions for additional queries at any time; queries match in parallel
+        // Create subscriptions for additional queries at any time; queries match in parallel
 
         // Add some data with infinite (= 0) time-to-live.
         // Results derived from this data will never expire.
@@ -83,14 +83,14 @@ public class BasicExample {
         RDFFormat format = RDFFormat.TURTLE;
         RDFParser parser = Rio.createParser(format);
         parser.setRDFHandler(queryEngine.createRDFHandler(eventTtl));
-        // as new statements are added, computed query answers will be pushed to the BindingSetHandler
+        // As new statements are added, computed query answers will be pushed to the BindingSetHandler.
         parser.parse(new ByteArrayInputStream(eventData.getBytes()), "");
 
-        // cancel the query subscription at any time;
-        // no further answers will be computed/produced for the corresponding query
+        // Cancel the query subscription at any time;
+        // no further answers will be computed/produced for the corresponding query.
         sub.cancel();
 
-        // alternatively, renew the subscription for another 10 minutes
+        // Alternatively, renew the subscription for another 10 minutes.
         sub.renew(10 * 60);
     }
 }
