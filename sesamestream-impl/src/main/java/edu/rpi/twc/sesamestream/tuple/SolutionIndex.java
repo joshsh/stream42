@@ -2,9 +2,11 @@ package edu.rpi.twc.sesamestream.tuple;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 /**
@@ -13,9 +15,13 @@ import java.util.Stack;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SolutionIndex<T> {
-    private final Map<String, Map<T, GroupIndex<T>>> solutionsByBinding = new HashMap<String, Map<T, GroupIndex<T>>>();
     private final Query.QueryVariables queryVariables;
     private final int totalPatterns;
+
+    private final Map<String, Map<T, Set<SolutionGroup<T>>>> groupsByBinding
+            = new HashMap<String, Map<T, Set<SolutionGroup<T>>>>();
+    private final Map<Integer, SolutionGroup<T>> groupsByHash
+            = new HashMap<Integer, SolutionGroup<T>>();
 
     /**
      * Constructs a new solution index
@@ -31,20 +37,38 @@ public class SolutionIndex<T> {
 
     /**
      * Adds a solution to this index.
-     * This operation may or may not change the state of the index.
      *
-     * @param sol the solution to add
+     * @param s   the solution to add
      * @param now the current time, in milliseconds since the Unix epoch
+     * @return whether the solution was actually added, rather than being ignored due to equality with
+     * or containment within another solution which does not expire sooner
      */
-    public boolean add(final Solution<T> sol, final long now) {
-        boolean added = false;
+    public boolean add(final Solution<T> s, final long now) {
+        Bindings<T> b = s.getBindings();
+        int hash = b.getHash();
+        SolutionGroup<T> g = groupsByHash.get(hash);
 
-        // make the added partial solution accessible through each of its bindings
-        for (Map.Entry<String, T> e : sol.getBindings().entrySet()) {
-            added |= add(e.getKey(), e.getValue(), sol, now);
+        if (null == g) {
+            // note: assumes that the bindings will not change externally
+            g = new SolutionGroup<T>(b);
+            groupsByHash.put(hash, g);
+
+            for (Map.Entry<String, T> e : b.entrySet()) {
+                Map<T, Set<SolutionGroup<T>>> groupsByValue = groupsByBinding.get(e.getKey());
+                if (null == groupsByValue) {
+                    groupsByValue = new HashMap<T, Set<SolutionGroup<T>>>();
+                    groupsByBinding.put(e.getKey(), groupsByValue);
+                }
+                Set<SolutionGroup<T>> groups = groupsByValue.get(e.getValue());
+                if (null == groups) {
+                    groups = new HashSet<SolutionGroup<T>>();
+                    groupsByValue.put(e.getValue(), groups);
+                }
+                groups.add(g);
+            }
         }
 
-        return added;
+        return g.add(s, now);
     }
 
     /**
@@ -56,8 +80,8 @@ public class SolutionIndex<T> {
      * @return an iterator over all solutions to the query which contain the given binding
      */
     public Iterator<Solution<T>> getSolutions(final String variable, final T value, final long now) {
-        GroupIndex<T> g = getGroupIndex(variable, value);
-        return null == g ? null : new SolutionIterator<T>(g.groups.values().iterator(), now);
+        Set<SolutionGroup<T>> groups = getSolutionGroups(variable, value);
+        return null == groups ? null : new SolutionIterator<T>(groups.iterator(), now);
     }
 
     // note: used only in unit tests
@@ -148,32 +172,24 @@ public class SolutionIndex<T> {
 
         Collection<SolutionGroup<T>> toRemove = new LinkedList<SolutionGroup<T>>();
 
-        for (Map.Entry<String, Map<T, GroupIndex<T>>> e : solutionsByBinding.entrySet()) {
-            for (Map.Entry<T, GroupIndex<T>> e2 : e.getValue().entrySet()) {
-                GroupIndex<T> gi = e2.getValue();
-                for (Map.Entry<Integer, SolutionGroup<T>> e3 : gi.groups.entrySet()) {
-                    SolutionGroup<T> g = e3.getValue();
-                    count += g.removeExpired(now);
-                    if (g.getSolutions().isNil()) {
-                        toRemove.add(g);
-                    }
-                }
+        for (SolutionGroup<T> g : groupsByHash.values()) {
+            count += g.removeExpired(now);
+            if (g.getSolutions().isNil()) {
+                toRemove.add(g);
             }
         }
 
         for (SolutionGroup<T> g : toRemove) {
             Bindings<T> bindings = g.getBindings();
             for (Map.Entry<String, T> e : bindings.entrySet()) {
-                GroupIndex<T> gi = getGroupIndex(e.getKey(), e.getValue());
-                if (null != gi) {
-                    gi.groups.remove(bindings.getHash());
-                    if (0 == gi.groups.size()) {
-                        Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(e.getKey());
-                        byVariable.remove(e.getValue());
-                        if (0 == byVariable.size()) {
-                            solutionsByBinding.remove(e.getKey());
-                        }
-                    }
+                Map<T, Set<SolutionGroup<T>>> groupsByValue = groupsByBinding.get(e.getKey());
+                Set<SolutionGroup<T>> groups = groupsByValue.get(e.getValue());
+                groups.remove(g);
+                if (0 == groups.size()) {
+                    groupsByValue.remove(e.getValue());
+                }
+                if (0 == groupsByValue.size()) {
+                    groupsByBinding.remove(e.getKey());
                 }
             }
         }
@@ -181,47 +197,13 @@ public class SolutionIndex<T> {
         return count;
     }
 
-    private boolean add(final String variable, final T value, final Solution<T> ps, final long now) {
-        Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(variable);
-        if (null == byVariable) {
-            byVariable = new HashMap<T, GroupIndex<T>>();
-            solutionsByBinding.put(variable, byVariable);
-        }
-
-        GroupIndex<T> byValue = byVariable.get(value);
-        if (null == byValue) {
-            byValue = new GroupIndex<T>();
-            byVariable.put(value, byValue);
-        }
-
-        return byValue.add(ps, now);
-    }
-
-    private GroupIndex<T> getGroupIndex(final String variable, final T value) {
-        Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(variable);
-        if (null == byVariable) {
+    private Set<SolutionGroup<T>> getSolutionGroups(final String variable, final T value) {
+        Map<T, Set<SolutionGroup<T>>> groupsByValue = groupsByBinding.get(variable);
+        if (null == groupsByValue) {
             return null;
         }
 
-        return byVariable.get(value);
-    }
-
-    private static class GroupIndex<T> {
-        private final Map<Integer, SolutionGroup<T>> groups = new HashMap<Integer, SolutionGroup<T>>();
-
-        public boolean add(final Solution<T> ps,
-                           final long now) {
-            int h = ps.getBindings().getHash();
-            SolutionGroup<T> g = groups.get(h);
-
-            if (null == g) {
-                // note: assumes that the bindings will not change externally
-                g = new SolutionGroup<T>(ps.getBindings());
-                groups.put(h, g);
-            }
-
-            return g.add(ps, now);
-        }
+        return groupsByValue.get(value);
     }
 
     private static class SolutionIterator<T> implements Iterator<Solution<T>> {
