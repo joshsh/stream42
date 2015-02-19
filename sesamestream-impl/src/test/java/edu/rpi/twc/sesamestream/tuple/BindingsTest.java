@@ -22,8 +22,8 @@ public class BindingsTest {
         Query.QueryVariables vars
                 = new Query.QueryVariables(Arrays.asList("x", "y", "z"));
         Map<String, String> map = new HashMap<String, String>();
-        Set<Long> hashes = new HashSet<Long>();
-        long hash;
+        Set<Integer> hashes = new HashSet<Integer>();
+        int hash;
 
         map.clear();
         map.put("x", "red");

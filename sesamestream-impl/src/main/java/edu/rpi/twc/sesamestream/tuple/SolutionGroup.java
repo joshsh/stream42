@@ -1,8 +1,9 @@
 package edu.rpi.twc.sesamestream.tuple;
 
 /**
- * A group of partial solutions with identical bindings but potentially different sets of matched tuple patterns.
+ * A group of solutions with identical bindings but potentially different sets of matched tuple patterns.
  * The group takes advantage of containment relationships to eliminate redundant or weak solutions, saving work.
+ * There is only one solution group per unique set of bindings per solution index.
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
@@ -151,5 +152,15 @@ public class SolutionGroup<T> {
         }
 
         return removed;
+    }
+
+    @Override
+    public int hashCode() {
+        return bindings.getHash();
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+        return other instanceof SolutionGroup && (((SolutionGroup) other).bindings.getHash() == bindings.getHash());
     }
 }

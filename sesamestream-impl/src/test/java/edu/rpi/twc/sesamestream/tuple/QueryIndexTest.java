@@ -281,12 +281,12 @@ public class QueryIndexTest {
                                      final Map<String, T>... expected) {
         int ttl = 0;
 
-        final Map<Long, Bindings<T>> all = new HashMap<Long, Bindings<T>>();
+        final Map<Integer, Bindings<T>> all = new HashMap<Integer, Bindings<T>>();
 
-        Map<Long, Integer> expectedCount = new HashMap<Long, Integer>();
+        Map<Integer, Integer> expectedCount = new HashMap<Integer, Integer>();
         for (Map<String, T> m : expected) {
             Bindings<T> bindings = new Bindings<T>(m, vars);
-            long hash = bindings.getHash();
+            int hash = bindings.getHash();
             all.put(hash, bindings);
             Integer c = expectedCount.get(hash);
             if (null == c) {
@@ -295,11 +295,11 @@ public class QueryIndexTest {
             expectedCount.put(hash, c + 1);
         }
 
-        final Map<Long, Integer> actualCount = new HashMap<Long, Integer>();
+        final Map<Integer, Integer> actualCount = new HashMap<Integer, Integer>();
         QueryIndex.SolutionHandler<T> handler = new QueryIndex.SolutionHandler<T>() {
             @Override
             public void handle(String id, Bindings<T> bindings) {
-                long hash = bindings.getHash();
+                int hash = bindings.getHash();
                 all.put(hash, bindings);
                 Integer c = actualCount.get(hash);
                 if (null == c) {
@@ -312,7 +312,7 @@ public class QueryIndexTest {
         QueryIndex<T> index = (QueryIndex<T>) queryIndex;
         index.add(tuple, handler, ttl, now);
 
-        for (Map.Entry<Long, Bindings<T>> e : all.entrySet()) {
+        for (Map.Entry<Integer, Bindings<T>> e : all.entrySet()) {
             Integer act = actualCount.get(e.getKey());
             Integer exp = expectedCount.get(e.getKey());
             if (null == act) {

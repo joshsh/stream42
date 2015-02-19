@@ -69,7 +69,7 @@ public class Query<T> implements Comparable<Query<T>> {
         }
         variables = new QueryVariables(variableSet);
 
-        this.solutionIndex = new SolutionIndex<T>(variables, patterns.size(), tupleSize);
+        this.solutionIndex = new SolutionIndex<T>(variables, patterns.size());
     }
 
     /**

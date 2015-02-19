@@ -16,21 +16,17 @@ public class SolutionIndex<T> {
     private final Map<String, Map<T, GroupIndex<T>>> solutionsByBinding = new HashMap<String, Map<T, GroupIndex<T>>>();
     private final Query.QueryVariables queryVariables;
     private final int totalPatterns;
-    private final int tupleSize;
 
     /**
      * Constructs a new solution index
      *
      * @param queryVariables the variables of the query for which this is an index
      * @param totalPatterns  the total number of tuple patterns in the query for which this is an index
-     * @param tupleSize      the size of the tuples matched in the corresponding query index
      */
     public SolutionIndex(final Query.QueryVariables queryVariables,
-                         final int totalPatterns,
-                         final int tupleSize) {
+                         final int totalPatterns) {
         this.queryVariables = queryVariables;
         this.totalPatterns = totalPatterns;
-        this.tupleSize = tupleSize;
     }
 
     /**
@@ -148,16 +144,16 @@ public class SolutionIndex<T> {
      * @return the number of solutions removed
      */
     public int removeExpired(final long now) {
-        int removedSolutions = 0;
+        int count = 0;
 
         Collection<SolutionGroup<T>> toRemove = new LinkedList<SolutionGroup<T>>();
 
         for (Map.Entry<String, Map<T, GroupIndex<T>>> e : solutionsByBinding.entrySet()) {
             for (Map.Entry<T, GroupIndex<T>> e2 : e.getValue().entrySet()) {
                 GroupIndex<T> gi = e2.getValue();
-                for (Map.Entry<Long, SolutionGroup<T>> e3 : gi.groups.entrySet()) {
+                for (Map.Entry<Integer, SolutionGroup<T>> e3 : gi.groups.entrySet()) {
                     SolutionGroup<T> g = e3.getValue();
-                    removedSolutions += g.removeExpired(now);
+                    count += g.removeExpired(now);
                     if (g.getSolutions().isNil()) {
                         toRemove.add(g);
                     }
@@ -182,7 +178,7 @@ public class SolutionIndex<T> {
             }
         }
 
-        return removedSolutions;
+        return count;
     }
 
     private boolean add(final String variable, final T value, final Solution<T> ps, final long now) {
@@ -211,11 +207,11 @@ public class SolutionIndex<T> {
     }
 
     private static class GroupIndex<T> {
-        private final Map<Long, SolutionGroup<T>> groups = new HashMap<Long, SolutionGroup<T>>();
+        private final Map<Integer, SolutionGroup<T>> groups = new HashMap<Integer, SolutionGroup<T>>();
 
         public boolean add(final Solution<T> ps,
                            final long now) {
-            long h = ps.getBindings().getHash();
+            int h = ps.getBindings().getHash();
             SolutionGroup<T> g = groups.get(h);
 
             if (null == g) {

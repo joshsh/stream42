@@ -15,7 +15,7 @@ public class Bindings<T> {
     // bit field; bits for bound variables are 1, unbound variables 0 in order defined by the query
     private final int boundVariables;
 
-    private Long hash;
+    private Integer hash;
 
     /**
      * Constructs a new set of bindings
@@ -46,11 +46,12 @@ public class Bindings<T> {
      *
      * @return a hashing key generated from these bindings
      */
-    public Long getHash() {
+    public int getHash() {
         if (null == hash) {
-            long h = 0L;
+            int h = 0;
 
             for (Map.Entry<String, T> e : map.entrySet()) {
+                // TODO: avoid the expensive multiplication operation
                 h += e.getKey().hashCode() * e.getValue().hashCode();
             }
 
@@ -158,5 +159,15 @@ public class Bindings<T> {
         }
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public int hashCode() {
+        return getHash();
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+        return other instanceof Bindings && (((Bindings) other).getHash() == getHash());
     }
 }

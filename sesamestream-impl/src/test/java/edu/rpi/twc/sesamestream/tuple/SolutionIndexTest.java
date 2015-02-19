@@ -30,8 +30,7 @@ public class SolutionIndexTest {
         vars = new Query.QueryVariables(Arrays.asList("x", "y", "z"));
 
         int totalPatterns = 3;
-        int tupleSize = 3;
-        index = new SolutionIndex<String>(vars, totalPatterns, tupleSize);
+        index = new SolutionIndex<String>(vars, totalPatterns);
     }
 
     @Test
@@ -320,7 +319,7 @@ public class SolutionIndexTest {
         solutions.clear();
         index.joinSolutions(ps1, b, solutions, helper, now);
         assertEquals(5, solutions.size());
-        Map<Long, Solution<String>> solutionMap = toMap(solutions);
+        Map<Integer, Solution<String>> solutionMap = toMap(solutions);
         // solutions are not unique
         assertEquals(3, solutionMap.size());
         // joined solution is {x:red,y:green,z:blue}
@@ -433,11 +432,11 @@ public class SolutionIndexTest {
     }
 
     // note: disregards duplicate solutions
-    private <T> Map<Long, Solution<T>> toMap(final Stack<Solution<T>> solutions) {
-        Map<Long, Solution<T>> map = new HashMap<Long, Solution<T>>();
+    private <T> Map<Integer, Solution<T>> toMap(final Stack<Solution<T>> solutions) {
+        Map<Integer, Solution<T>> map = new HashMap<Integer, Solution<T>>();
 
         for (Solution<T> ps : solutions) {
-            long hash = ps.getBindings().getHash();
+            int hash = ps.getBindings().getHash();
             map.put(hash, ps);
         }
 
