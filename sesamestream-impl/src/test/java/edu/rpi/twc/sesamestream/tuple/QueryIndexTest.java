@@ -125,10 +125,18 @@ public class QueryIndexTest {
         assertSolutions(now, vars, tuple);
         tuple = new String[]{"trillian", "knows", "marvin"};
         assertSolutions(now, vars, tuple);
-        tuple = new String[]{"marvin", "knows", "marvin"};
-        assertSolutions(now, vars, tuple);
         tuple = new String[]{"zaphod", "mocks", "arthur"};
         assertSolutions(now, vars, tuple);
+
+        // This tuple *does* produce a complete solution, because a partial solution from one "knows" pattern
+        // is available when the next "knows" pattern is processed.
+        // Here, the query happens to be symmetrical, but it undefined which pattern is processed first.
+        tuple = new String[]{"marvin", "knows", "marvin"};
+        map1.clear();
+        map1.put("x", "marvin");
+        map1.put("y", "marvin");
+        map1.put("z", "marvin");
+        assertSolutions(now, vars, tuple, map1);
 
         tuple = new String[]{"zaphod", "knows", "arthur"};
         map1.clear();
@@ -228,41 +236,41 @@ public class QueryIndexTest {
         now += 1000L * 61;
         queryIndex.removeExpired(now);
 
-        // just re-insert one tuple to trigger a solution
-        tuple = new String[]{"zaphod", "knows", "trillian"};
+        // insert a new, unique tuple to trigger a solution
+        tuple = new String[]{"zaphod", "knows", "marvin"};
         map.clear();
         map.put("x", "arthur");
         map.put("y", "ford");
         map.put("z", "zaphod");
-        map.put("a", "trillian");
+        map.put("a", "marvin");
         assertSolutions(now, query1.getVariables(), tuple, map);
 
         // this pattern has gone
-        tuple = new String[]{"arthur", "name", "\"Arthur Dent\""};
+        tuple = new String[]{"arthur", "name", "\"Arthur\""};
         assertSolutions(now, query2.getVariables(), tuple);
-        tuple = new String[]{"arthur", "race", "human"};
+        tuple = new String[]{"arthur", "race", "ape-descendant"};
         assertSolutions(now, query2.getVariables(), tuple);
 
-        tuple = new String[]{"France", "population", "dozens of millions"};
+        tuple = new String[]{"France", "population", "tens of millions"};
         map.clear();
         map.put("country", "France");
         map.put("name", "\"France\"");
-        map.put("pop", "dozens of millions");
+        map.put("pop", "tens of millions");
         assertSolutions(now, query3.getVariables(), tuple, map);
 
         now += 1000L * 61;
         queryIndex.removeExpired(now);
 
-        tuple = new String[]{"zaphod", "knows", "trillian"};
+        tuple = new String[]{"zaphod", "knows", "eddie"};
         map.clear();
         map.put("x", "arthur");
         map.put("y", "ford");
         map.put("z", "zaphod");
-        map.put("a", "trillian");
+        map.put("a", "eddie");
         assertSolutions(now, query1.getVariables(), tuple, map);
 
         // now this pattern is gone, as well
-        tuple = new String[]{"France", "population", "dozens of millions"};
+        tuple = new String[]{"France", "population", "zillions of millions"};
         assertSolutions(now, query3.getVariables(), tuple);
     }
 

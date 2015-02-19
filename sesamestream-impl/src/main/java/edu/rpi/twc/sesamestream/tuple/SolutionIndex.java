@@ -40,11 +40,15 @@ public class SolutionIndex<T> {
      * @param sol the solution to add
      * @param now the current time, in milliseconds since the Unix epoch
      */
-    public void add(final Solution<T> sol, final long now) {
+    public boolean add(final Solution<T> sol, final long now) {
+        boolean added = false;
+
         // make the added partial solution accessible through each of its bindings
         for (Map.Entry<String, T> e : sol.getBindings().entrySet()) {
-            add(e.getKey(), e.getValue(), sol, now);
+            added |= add(e.getKey(), e.getValue(), sol, now);
         }
+
+        return added;
     }
 
     /**
@@ -107,12 +111,11 @@ public class SolutionIndex<T> {
         solutions.clear();
         helper.clear();
 
-        // the original solution is among the solutions produced, and all others must be composable with it.
-        // We assume that it is unexpired.
+        // The original solution is among the solutions produced. We assume that it is unexpired.
         solutions.push(matchedSolution);
 
-        // For each binding pair, we retrieve matching solutions from the index, add them to the solutions produced,
-        // and also join them with all solutions produced in previous steps, including the original solution.
+        // For each binding pair, we retrieve matching solutions from the index,
+        // and join them with all solutions produced in previous steps, including the original solution.
         for (Map.Entry<String, T> e : bindings.entrySet()) {
             String var = e.getKey();
             T value = e.getValue();
@@ -121,16 +124,11 @@ public class SolutionIndex<T> {
             if (null != retrieved && retrieved.hasNext()) {
                 while (retrieved.hasNext()) {
                     Solution<T> retrievedSolution = retrieved.next();
-                    if (matchedSolution.composableWith(retrievedSolution, queryVariables)) {
-                        // note: this incidentally allows us to discard the mutable object provided by the iterator
-                        Solution<T> composedSolution
-                                = new Solution<T>(totalPatterns, matchedSolution, retrievedSolution);
-                        helper.push(composedSolution);
 
-                        for (Solution<T> s : solutions) {
-                            if (retrievedSolution.composableWith(s, queryVariables)) {
-                                helper.push(new Solution<T>(totalPatterns, retrievedSolution, s));
-                            }
+                    for (Solution<T> s : solutions) {
+                        if (retrievedSolution.composableWith(s, queryVariables)) {
+                            // note: this incidentally allows us to discard the mutable object provided by the iterator
+                            helper.push(new Solution<T>(totalPatterns, retrievedSolution, s));
                         }
                     }
                 }
@@ -187,7 +185,7 @@ public class SolutionIndex<T> {
         return removedSolutions;
     }
 
-    private void add(final String variable, final T value, final Solution<T> ps, final long now) {
+    private boolean add(final String variable, final T value, final Solution<T> ps, final long now) {
         Map<T, GroupIndex<T>> byVariable = solutionsByBinding.get(variable);
         if (null == byVariable) {
             byVariable = new HashMap<T, GroupIndex<T>>();
@@ -200,7 +198,7 @@ public class SolutionIndex<T> {
             byVariable.put(value, byValue);
         }
 
-        byValue.add(ps, now);
+        return byValue.add(ps, now);
     }
 
     private GroupIndex<T> getGroupIndex(final String variable, final T value) {
@@ -215,8 +213,8 @@ public class SolutionIndex<T> {
     private static class GroupIndex<T> {
         private final Map<Long, SolutionGroup<T>> groups = new HashMap<Long, SolutionGroup<T>>();
 
-        public void add(final Solution<T> ps,
-                        final long now) {
+        public boolean add(final Solution<T> ps,
+                           final long now) {
             long h = ps.getBindings().getHash();
             SolutionGroup<T> g = groups.get(h);
 
@@ -226,7 +224,7 @@ public class SolutionIndex<T> {
                 groups.put(h, g);
             }
 
-            g.add(ps, now);
+            return g.add(ps, now);
         }
     }
 

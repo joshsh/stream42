@@ -28,9 +28,6 @@ public class Query<T> implements Comparable<Query<T>> {
 
     private final SolutionIndex<T> solutionIndex;
 
-    // a temporary collection used externally for tuple matching
-    private final Set<Long> solutionHashes = new HashSet<Long>();
-
     /**
      * Constructs a new query given a set of tuple patterns and an expiration time
      *
@@ -120,15 +117,6 @@ public class Query<T> implements Comparable<Query<T>> {
      */
     public SolutionIndex<T> getSolutionIndex() {
         return solutionIndex;
-    }
-
-    /**
-     * Gets the solution hashes stored along with this query
-     *
-     * @return the set of solution hashes used by the query index to deduplicate query answers
-     */
-    public Set<Long> getSolutionHashes() {
-        return solutionHashes;
     }
 
     /**

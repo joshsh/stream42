@@ -284,7 +284,7 @@ public class SolutionIndexTest {
 
         solutions.clear();
         index.joinSolutions(ps1, b, solutions, helper, now);
-        assertEquals(3, solutions.size());
+        assertEquals(2, solutions.size());
 
         map2 = new HashMap<String, String>();
         map2.put("x", "red");
@@ -295,7 +295,7 @@ public class SolutionIndexTest {
 
         solutions.clear();
         index.joinSolutions(ps1, b, solutions, helper, now);
-        assertEquals(5, solutions.size());
+        assertEquals(3, solutions.size());
 
         // add an irrelevant solution
         map2 = new HashMap<String, String>();
@@ -306,7 +306,7 @@ public class SolutionIndexTest {
 
         solutions.clear();
         index.joinSolutions(ps1, b, solutions, helper, now);
-        assertEquals(5, solutions.size());
+        assertEquals(3, solutions.size());
 
         // add a solution which is reached through recursion.
         // It will be composed with a previously added solution to produce yet another solution.
@@ -319,7 +319,7 @@ public class SolutionIndexTest {
 
         solutions.clear();
         index.joinSolutions(ps1, b, solutions, helper, now);
-        assertEquals(9, solutions.size());
+        assertEquals(5, solutions.size());
         Map<Long, Solution<String>> solutionMap = toMap(solutions);
         // solutions are not unique
         assertEquals(3, solutionMap.size());

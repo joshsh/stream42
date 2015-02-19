@@ -224,7 +224,7 @@ public class QueryEngineImplTest extends QueryEngineTestBase {
         answers = continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("exponential-join-distinct.rq"), false);
         // note: the number of distinct "non-pathological" solutions is 9
-        assertEquals(11, answers.size());
+        assertEquals(13, answers.size());
     }
 
     @Test

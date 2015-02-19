@@ -91,4 +91,49 @@ public class BindingsTest {
         assertTrue(b1.compatibleWith(b2, vars));
         assertTrue(b2.compatibleWith(b1, vars));
     }
+
+    @Test
+    public void testBindingsFromComponents() throws Exception {
+        Query.QueryVariables vars = new Query.QueryVariables(Arrays.asList("x", "y", "z"));
+        Map<String, String> map1a = new HashMap<String, String>();
+        map1a.put("x", "red");
+        map1a.put("y", "green");
+        Map<String, String> map1b = new HashMap<String, String>();
+        map1b.put("x", "red");
+        map1b.put("y", "green");
+        Map<String, String> map2 = new HashMap<String, String>();
+        map2.put("x", "red");
+        map2.put("y", "green");
+        map2.put("z", "blue");
+        Map<String, String> map3 = new HashMap<String, String>();
+        map3.put("x", "red");
+        map3.put("z", "blue");
+        Bindings<String>
+                b1a = new Bindings<String>(map1a, vars),
+                b1b = new Bindings<String>(map1b, vars),
+                b2 = new Bindings<String>(map2, vars),
+                b3 = new Bindings<String>(map3, vars);
+
+        Bindings<String> result;
+
+        result = Bindings.from(b1a, b1b);
+        assertTrue(result == b1a);
+        assertFalse(result == b1b);
+
+        result = Bindings.from(b1a, b2);
+        assertTrue(result == b2);
+        result = Bindings.from(b2, b1a);
+        assertTrue(result == b2);
+
+        result = Bindings.from(b1a, b3);
+        assertFalse(result == b1a);
+        assertFalse(result == b3);
+        assertEquals(3, result.size());
+        assertEquals("red", result.get("x"));
+        assertEquals("green", result.get("y"));
+        assertEquals("blue", result.get("z"));
+
+        result = Bindings.from(b2, result);
+        assertTrue(result == b2);
+    }
 }

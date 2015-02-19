@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 
 /**
  * A recursive data structure which indexes tuple-based queries and matches incoming tuples against
- * stored queries in a forward-chaining fashion.
+ * stored queries in an incremental fashion.
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
@@ -55,7 +55,7 @@ public class QueryIndex<T> {
         valueIndexes = null;
         patterns = null;
 
-        rootMetadata.clearAll();
+        rootMetadata.clear();
     }
 
     /**
@@ -136,20 +136,11 @@ public class QueryIndex<T> {
 
         long expirationTime = ttl > 0 ? now + 1000L * ttl : 0;
 
-        // reset in case of previous exceptions
-        rootMetadata.clearSolutionMetadata();
-
         // Calculate all new partial solutions and save them in a buffer until all matching tuple patterns have been
         // applied to the tuple.
         // Do not allow solutions created while processing one tuple pattern to be accessible while processing
         // the next.
-        boolean changed = add(tuple, 0, rootMetadata, expirationTime, now);
-
-        produceSolutions(handler, rootMetadata, now);
-
-        rootMetadata.clearSolutionMetadata();
-
-        return changed;
+        return add(tuple, rootMetadata, handler, expirationTime, now, 0);
     }
 
     /**
@@ -246,10 +237,11 @@ public class QueryIndex<T> {
     }
 
     private boolean add(final T[] tuple,
-                        final int level,
                         final RootMetadata<T> meta,
+                        final SolutionHandler<T> handler,
                         final long expirationTime,
-                        final long now) {
+                        final long now,
+                        final int level) {
         boolean changed = false;
 
         if (meta.tupleSize == level) {
@@ -265,24 +257,29 @@ public class QueryIndex<T> {
                 pattern.getQuery().getSolutionIndex().joinSolutions(
                         matchedSolution, b, solutions, meta.helperStack, now);
 
-                // prepare for the solution-production phase
-                pattern.getQuery().getSolutionHashes().clear();
-
-                TuplePatternSolutions<T> ts = new TuplePatternSolutions<T>();
-                ts.pattern = pattern;
-                ts.solutions = solutions;
-                meta.tpSolutions.add(ts);
-                changed = true;
+                // Immediately add solutions to the solution index.
+                // As a side-effect, these solutions are available when subsequent patterns of the same query
+                // are applied to the same tuple.
+                for (Solution<T> s : solutions) {
+                    // Add both complete and incomplete solutions to the solution index.
+                    // The awareness of complete solutions potentially saves work, as contained solutions are abandoned.
+                    boolean added = pattern.getQuery().getSolutionIndex().add(s, now);
+                    if (added && s.isComplete()) {
+                        // if the join is a complete solution, handle it as such, provided that it is unique.
+                        handler.handle(pattern.getQuery().getId(), s.getBindings());
+                    }
+                    changed |= added;
+                }
             }
         } else {
             if (null != wildcardIndex) {
-                changed = wildcardIndex.add(tuple, level + 1, meta, expirationTime, now);
+                changed = wildcardIndex.add(tuple, meta, handler, expirationTime, now, level + 1);
             }
 
             if (null != valueIndexes) {
                 QueryIndex<T> idx = valueIndexes.get(tuple[level]);
                 if (null != idx) {
-                    changed |= idx.add(tuple, level + 1, meta, expirationTime, now);
+                    changed |= idx.add(tuple, meta, handler, expirationTime, now, level + 1);
                 }
             }
         }
@@ -290,35 +287,8 @@ public class QueryIndex<T> {
         return changed;
     }
 
-    private void produceSolutions(final SolutionHandler<T> handler,
-                                  final RootMetadata<T> meta,
-                                  final long now) {
-        for (TuplePatternSolutions<T> ts : meta.tpSolutions) {
-            SolutionIndex<T> solutionIndex = ts.pattern.getQuery().getSolutionIndex();
-            Set<Long> hashes = ts.pattern.getQuery().getSolutionHashes();
-
-            for (Solution<T> s : ts.solutions) {
-                // if the join is a complete solution, handle it as such,
-                // provided that an identical solution has not already been produced in response to the current tuple.
-                if (s.isComplete()) {
-                    long hash = s.getBindings().getHash();
-                    if (hashes.contains(hash)) {
-                        continue;
-                    }
-                    hashes.add(hash);
-
-                    handler.handle(ts.pattern.getQuery().getId(), s.getBindings());
-                }
-
-                // Add both complete and incomplete solutions to the solution index.
-                // The awareness of complete solutions potentially saves work, as contained solutions are abandoned.
-                solutionIndex.add(s, now);
-            }
-        }
-    }
-
     /**
-     * A handler for candidate solutions.  These potentially become SPARQL solutions after filtering and projection.
+     * A handler for complete solutions.
      */
     public static interface SolutionHandler<T> {
         /**
@@ -330,15 +300,9 @@ public class QueryIndex<T> {
         void handle(String id, Bindings<T> bindings);
     }
 
-    private static class TuplePatternSolutions<T> {
-        public Stack<Solution<T>> solutions;
-        public Query.PatternInQuery<T> pattern;
-    }
-
     private static class RootMetadata<T> {
         private final int tupleSize;
         private final PriorityQueue<Query<T>> queries = new PriorityQueue<Query<T>>();
-        private final Collection<TuplePatternSolutions<T>> tpSolutions = new LinkedList<TuplePatternSolutions<T>>();
         private final Stack<Solution<T>> helperStack = new Stack<Solution<T>>();
         private int queryIdCount = 0;
 
@@ -346,13 +310,8 @@ public class QueryIndex<T> {
             this.tupleSize = tupleSize;
         }
 
-        public void clearAll() {
-            clearSolutionMetadata();
+        public void clear() {
             queries.clear();
-        }
-
-        public void clearSolutionMetadata() {
-            tpSolutions.clear();
         }
 
         public String add(final Query<T> query) {

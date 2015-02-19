@@ -22,6 +22,7 @@ public class SolutionGroup<T> {
 
     /**
      * Gets the bindings of this solution group
+     *
      * @return a set of bindings
      */
     public Bindings<T> getBindings() {
@@ -52,11 +53,12 @@ public class SolutionGroup<T> {
      *            be rejected and expired solutions still present in the group and encountered in the process of
      *            insertion will be removed.
      */
-    public void add(final Solution<T> sol,
-                    final long now) {
+    public boolean add(final Solution<T> sol,
+                       final long now) {
         // do not add an expired solution
         if (sol.isExpired(now)) {
-            return;
+            // TODO: we can assume that added solutions will be unexpired.  Double-check this assumption.
+            return false;
         }
 
         LList<SolutionPattern> cur = solutions, prev = null;
@@ -73,7 +75,7 @@ public class SolutionGroup<T> {
                     case Contains:
                         // old solution contains new solution; ignore the new one, but *only* if it will expire first
                         if (SolutionPattern.compareExpirationTimes(curSol, sol) >= 0) {
-                            return;
+                            return false;
                         }
                         break;
                     case ContainedIn:
@@ -84,9 +86,13 @@ public class SolutionGroup<T> {
                         break;
                     case Equal:
                         // new solution is identical to the old solution; simply update the expiration time
-                        long expirationTime = SolutionPattern.maxExpirationTime(curSol, sol);
-                        curSol.setExpirationTime(expirationTime);
-                        return;
+                        int cmp = SolutionPattern.compareExpirationTimes(curSol, sol);
+                        if (cmp < 0) {
+                            curSol.setExpirationTime(sol.expirationTime);
+                            return true;
+                        } else {
+                            return false;
+                        }
                     case PartialIntersect:
                         // old and new solutions have one or more patterns in common, and are yet distinct
                         break;
@@ -112,6 +118,8 @@ public class SolutionGroup<T> {
         solutions = solutions.push(
                 // as the group stores the bindings, we omit them here
                 new SolutionPattern(sol));
+
+        return true;
     }
 
     /**
