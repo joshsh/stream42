@@ -180,16 +180,19 @@ public class SolutionIndex<T> {
         }
 
         for (SolutionGroup<T> g : toRemove) {
-            Bindings<T> bindings = g.getBindings();
-            for (Map.Entry<String, T> e : bindings.entrySet()) {
+            for (Map.Entry<String, T> e : g.getBindings().entrySet()) {
                 Map<T, Set<SolutionGroup<T>>> groupsByValue = groupsByBinding.get(e.getKey());
-                Set<SolutionGroup<T>> groups = groupsByValue.get(e.getValue());
-                groups.remove(g);
-                if (0 == groups.size()) {
-                    groupsByValue.remove(e.getValue());
-                }
-                if (0 == groupsByValue.size()) {
-                    groupsByBinding.remove(e.getKey());
+                if (null != groupsByValue) {
+                    Set<SolutionGroup<T>> groups = groupsByValue.get(e.getValue());
+                    if (null != groups) {
+                        groups.remove(g);
+                        if (0 == groups.size()) {
+                            groupsByValue.remove(e.getValue());
+                        }
+                        if (0 == groupsByValue.size()) {
+                            groupsByBinding.remove(e.getKey());
+                        }
+                    }
                 }
             }
         }
