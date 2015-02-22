@@ -3,7 +3,6 @@ package edu.rpi.twc.sesamestream;
 import org.openrdf.model.Statement;
 
 import java.io.IOException;
-import java.util.Collection;
 
 /**
  * A continuous SPARQL query engine with a publish/subscribe API
@@ -20,18 +19,18 @@ public interface QueryEngine {
     /**
      * Adds a new query subscription to this query engine
      *
-     * @param ttl the time-to-live of the generated subscription, in seconds.
-     *            If ttl > 0, the query has a finite lifetime and will be automatically unregistered at the end
-     *            of that lifetime.
-     *            Note: the query engine may be configured to reject a ttl which is too high, including 0 (infinite).
-     * @param query the query to add
+     * @param ttl     the time-to-live of the generated subscription, in seconds.
+     *                If ttl > 0, the query has a finite lifetime and will be automatically unregistered at the end
+     *                of that lifetime.
+     *                Note: the query engine may be configured to reject a ttl which is too high, including 0 (infinite).
+     * @param query   the query to add
      * @param handler a handler for future query answers
      * @return a subscription for computation of future query answers
-     * @throws InvalidQueryException if the query is not valid SPARQL
+     * @throws InvalidQueryException      if the query is not valid SPARQL
      * @throws IncompatibleQueryException if the query is valid SPARQL,
-     * but is not supported by this query engine
-     * @throws IOException if there is a problem communicating with this query engine
-     * (for example, if there are network operations involved)
+     *                                    but is not supported by this query engine
+     * @throws IOException                if there is a problem communicating with this query engine
+     *                                    (for example, if there are network operations involved)
      */
     Subscription addQuery(int ttl, String query, BindingSetHandler handler)
             throws IOException, IncompatibleQueryException, InvalidQueryException;
@@ -43,35 +42,41 @@ public interface QueryEngine {
      * trigger the creation of partial solutions which are stored in anticipation of further statements,
      * or trigger the production query answers.
      *
-     * @param ttl the time-to-live of the added statements, in seconds.
-     *            If ttl > 0, any partial solutions which are computed in response to those statements have a finite
-     *            lifetime, and will expire from the index at the end of that lifetime.
+     * @param ttl        the time-to-live of the added statements, in seconds.
+     *                   If ttl > 0, any partial solutions which are computed in response to those statements have a finite
+     *                   lifetime, and will expire from the index at the end of that lifetime.
      * @param statements the statements to add.  Statements are added in array order
      * @throws IOException if there is a problem communicating with this query engine
-     * (for example, if there are network operations involved)
+     *                     (for example, if there are network operations involved)
      */
     void addStatements(int ttl, Statement... statements) throws IOException;
 
     /**
-     * Adds new statements to this query engine.
-     * Depending on the queries registered with this engine,
-     * the statements will either be discarded as irrelevant to the queries,
-     * trigger the creation of partial solutions which are stored in anticipation of further statements,
-     * or trigger the production query answers.
+     * Sets the clock used by this query engine to determine expiration of queries and solutions,
+     * overriding a default clock based on System.currentTimeMillis()
      *
-     * @param ttl the time-to-live of the added statements, in seconds.
-     *            If ttl > 0, any partial solutions which are computed in response to those statements have a finite
-     *            lifetime, and will expire from the index at the end of that lifetime.
-     * @param statements the statements to add.  Statements are added in the iterator order of the collection
-     * @throws IOException if there is a problem communicating with this query engine
-     * (for example, if there are network operations involved)
+     * @param clock the new clock
      */
-    void addStatements(int ttl, Collection<Statement> statements) throws IOException;
+    void setClock(Clock clock);
+
+    /**
+     * A clock used to determine expiration of queries and solutions
+     */
+    public static interface Clock {
+        /**
+         * Gets the real or virtual current time, in milliseconds
+         *
+         * @return the real or virtual current time, in milliseconds.
+         * Values produced must be non-negative and monotonically non-decreasing.
+         * The default implementation uses System.currentTimeMillis().
+         */
+        long getTime();
+    }
 
     /**
      * An exception thrown when a query is not valid SPARQL
      */
-    class InvalidQueryException extends Exception {
+    public static class InvalidQueryException extends Exception {
         public InvalidQueryException(Throwable cause) {
             super(cause);
         }
@@ -80,7 +85,7 @@ public interface QueryEngine {
     /**
      * An exception thrown when a valid SPARQL query is incompatible with a QueryEngine implementation
      */
-    class IncompatibleQueryException extends Exception {
+    public static class IncompatibleQueryException extends Exception {
         public IncompatibleQueryException(String message) {
             super(message);
         }

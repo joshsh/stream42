@@ -36,7 +36,6 @@ import org.openrdf.sail.Sail;
 import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailException;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -66,6 +65,8 @@ public class QueryEngineImpl implements QueryEngine {
     private final QueryIndex<Value> queryIndex;
 
     private final QueryIndex.SolutionHandler<Value> solutionHandler;
+
+    private Clock clock;
 
     private LinkedDataCache linkedDataCache;
     private SailConnection linkedDataCacheConnection;
@@ -109,9 +110,22 @@ public class QueryEngineImpl implements QueryEngine {
             }
         };
 
+        clock = new Clock() {
+            @Override
+            public long getTime() {
+                return System.currentTimeMillis();
+            }
+        };
+
         clear();
 
+        // TODO: a timer task makes cleanup less likely to interfere with an addStatement operation than
+        // triggering on a previous operation would do, but it is also dependent on real time
         scheduleTtlCleanup();
+    }
+
+    public void setClock(final Clock clock) {
+        this.clock = clock;
     }
 
     /**
@@ -202,7 +216,7 @@ public class QueryEngineImpl implements QueryEngine {
                                  final TupleExpr t,
                                  final BindingSetHandler h) throws IncompatibleQueryException {
         increment(countQueries, true);
-        long now = System.currentTimeMillis();
+        long now = clock.getTime();
         timeCurrentOperationBegan = now;
 
         SparqlQuery q = new SparqlQuery(t);
@@ -224,12 +238,6 @@ public class QueryEngineImpl implements QueryEngine {
     }
 
     public void addStatements(final int ttl, final Statement... statements) {
-        for (Statement s : statements) {
-            addStatement(ttl, s);
-        }
-    }
-
-    public void addStatements(final int ttl, final Collection<Statement> statements) {
         for (Statement s : statements) {
             addStatement(ttl, s);
         }
@@ -292,7 +300,7 @@ public class QueryEngineImpl implements QueryEngine {
 
     private void addStatement(final int ttl, final Statement s) {
         increment(countStatements, false);
-        long now = System.currentTimeMillis();
+        long now = clock.getTime();
         timeCurrentOperationBegan = now;
 
         Value[] tuple = toNative(s);
@@ -318,7 +326,7 @@ public class QueryEngineImpl implements QueryEngine {
     }
 
     public void renew(final SubscriptionImpl subscription, final int ttl) {
-        long now = System.currentTimeMillis();
+        long now = clock.getTime();
         queryIndex.renew(subscription.getQuery(), ttl, now);
     }
 
@@ -327,7 +335,7 @@ public class QueryEngineImpl implements QueryEngine {
         service.scheduleWithFixedDelay(new Runnable() {
             public void run() {
                 try {
-                    long now = System.currentTimeMillis();
+                    long now = clock.getTime();
                     queryIndex.removeExpired(now);
                 } catch (Throwable t) {
                     logger.log(Level.SEVERE, "TTL cleanup task failed", t);
@@ -510,7 +518,7 @@ public class QueryEngineImpl implements QueryEngine {
         if (SesameStream.getDoPerformanceMetrics()) {
             if (!SesameStream.getDoUseCompactLogFormat() || logHasChanged) {
                 StringBuilder sb = new StringBuilder("LOG\t");
-                sb.append(timeCurrentOperationBegan).append(",").append(System.currentTimeMillis());
+                sb.append(timeCurrentOperationBegan).append(",").append(clock.getTime());
                 for (Map.Entry<Quantity, Counter> entry : counters.entrySet()) {
                     sb.append(",").append(entry.getValue().count);
                 }
@@ -542,7 +550,7 @@ public class QueryEngineImpl implements QueryEngine {
         increment(countSolutions, true);
 
         if (SesameStream.getDoPerformanceMetrics()) {
-            System.out.println("SOLUTION\t" + System.currentTimeMillis() + "\t"
+            System.out.println("SOLUTION\t" + clock.getTime() + "\t"
                     + QueryEngineImpl.toString(solution));
         }
 
