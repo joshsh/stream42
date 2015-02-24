@@ -172,6 +172,7 @@ public class SolutionIndex<T> {
 
         Collection<SolutionGroup<T>> toRemove = new LinkedList<SolutionGroup<T>>();
 
+        // note: if there are few expired solutions, this phase is relatively quick
         for (SolutionGroup<T> g : groupsByHash.values()) {
             count += g.removeExpired(now);
             if (g.getSolutions().isNil()) {
@@ -180,6 +181,8 @@ public class SolutionIndex<T> {
         }
 
         for (SolutionGroup<T> g : toRemove) {
+            groupsByHash.remove(g.getBindings().getHash());
+
             for (Map.Entry<String, T> e : g.getBindings().entrySet()) {
                 Map<T, Set<SolutionGroup<T>>> groupsByValue = groupsByBinding.get(e.getKey());
                 if (null != groupsByValue) {
@@ -210,7 +213,6 @@ public class SolutionIndex<T> {
     }
 
     private static class SolutionIterator<T> implements Iterator<Solution<T>> {
-
         // note: solution is mutated on each call to next().  Read but do not store the object.
         private final Solution<T> solution = new Solution<T>(0, 0, null, 0);
 
@@ -243,9 +245,8 @@ public class SolutionIndex<T> {
 
             advanced = false;
 
-            SolutionPattern r = currentSolutions.getValue();
             // update the type info of the current solution on each step
-            solution.copyFrom(r);
+            solution.copyFrom(currentSolutions.getValue());
 
             return solution;
         }

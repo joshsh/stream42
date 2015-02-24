@@ -14,6 +14,7 @@ public class Solution<T> extends SolutionPattern {
 
     /**
      * Copy constructor
+     *
      * @param other another solution from which to produce a shallow copy
      */
     public Solution(final Solution<T> other) {
@@ -24,11 +25,11 @@ public class Solution<T> extends SolutionPattern {
     /**
      * Constructs a solution in which a single tuple pattern of a graph pattern has been matched
      *
-     * @param totalPatterns the total number of tuple patterns in the graph pattern
-     * @param index the index of the matched pattern (the first pattern having an index of 0)
-     * @param bindings the variable/term bindings created by the match
+     * @param totalPatterns  the total number of tuple patterns in the graph pattern
+     * @param index          the index of the matched pattern (the first pattern having an index of 0)
+     * @param bindings       the variable/term bindings created by the match
      * @param expirationTime the expiration time of this solution in milliseconds since the Unix epoch
-     *                       (or 0 for inifinite lifetime)
+     *                       (or 0 for infinite lifetime)
      */
     public Solution(final int totalPatterns,
                     final int index,
@@ -66,6 +67,7 @@ public class Solution<T> extends SolutionPattern {
 
     /**
      * Gets the variables bindings of this solution
+     *
      * @return the variable bindings of this solution.  When the solution is complete
      * (i.e. when all patterns of the query have been matched) the bindings are the the actual query "answer".
      */
@@ -75,6 +77,7 @@ public class Solution<T> extends SolutionPattern {
 
     /**
      * Sets the variable bindings of this solution.  This method is used internally, by the solution index.
+     *
      * @param bindings the new variable bindings
      */
     public void setBindings(final Bindings<T> bindings) {

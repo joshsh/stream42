@@ -41,9 +41,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -67,6 +64,11 @@ public class QueryEngineImpl implements QueryEngine {
     private final QueryIndex.SolutionHandler<Value> solutionHandler;
 
     private Clock clock;
+    private CleanupPolicy cleanupPolicy;
+
+    private long timeOfLastCleanup = 0;
+    private int queriesAddedSinceLastCleanup = 0;
+    private int statementsAddedSinceLastCleanup = 0;
 
     private LinkedDataCache linkedDataCache;
     private SailConnection linkedDataCacheConnection;
@@ -117,15 +119,25 @@ public class QueryEngineImpl implements QueryEngine {
             }
         };
 
-        clear();
+        cleanupPolicy = new CleanupPolicy() {
+            @Override
+            public boolean doCleanup(int secondsElapsedSinceLast,
+                                     int queriesAddedSinceLast,
+                                     int statementsAddedSinceLast) {
+                return secondsElapsedSinceLast >= 30;
+            }
+        };
 
-        // TODO: a timer task makes cleanup less likely to interfere with an addStatement operation than
-        // triggering on a previous operation would do, but it is also dependent on real time
-        scheduleTtlCleanup();
+        clear();
     }
 
     public void setClock(final Clock clock) {
         this.clock = clock;
+    }
+
+    @Override
+    public void setCleanupPolicy(final CleanupPolicy cleanupPolicy) {
+        this.cleanupPolicy = cleanupPolicy;
     }
 
     /**
@@ -234,12 +246,33 @@ public class QueryEngineImpl implements QueryEngine {
 
         logEntry();
 
+        queriesAddedSinceLastCleanup++;
+        checkCleanup(now);
+
         return s;
     }
 
     public void addStatements(final int ttl, final Statement... statements) {
         for (Statement s : statements) {
             addStatement(ttl, s);
+            statementsAddedSinceLastCleanup++;
+        }
+
+        checkCleanup(clock.getTime());
+    }
+
+    private void checkCleanup(final long now) {
+        int seconds = (int) ((now - timeOfLastCleanup) / 1000);
+
+        if (cleanupPolicy.doCleanup(seconds, queriesAddedSinceLastCleanup, statementsAddedSinceLastCleanup)) {
+            try {
+                queryIndex.removeExpired(now);
+                timeOfLastCleanup = now;
+                queriesAddedSinceLastCleanup = 0;
+                statementsAddedSinceLastCleanup = 0;
+            } catch (Throwable t) {
+                logger.log(Level.SEVERE, "TTL cleanup task failed", t);
+            }
         }
     }
 
@@ -328,20 +361,6 @@ public class QueryEngineImpl implements QueryEngine {
     public void renew(final SubscriptionImpl subscription, final int ttl) {
         long now = clock.getTime();
         queryIndex.renew(subscription.getQuery(), ttl, now);
-    }
-
-    private void scheduleTtlCleanup() {
-        ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-        service.scheduleWithFixedDelay(new Runnable() {
-            public void run() {
-                try {
-                    long now = clock.getTime();
-                    queryIndex.removeExpired(now);
-                } catch (Throwable t) {
-                    logger.log(Level.SEVERE, "TTL cleanup task failed", t);
-                }
-            }
-        }, TTL_CLEANUP_INITIAL_DELAY_MS, TTL_CLEANUP_PERIOD_MS, TimeUnit.MILLISECONDS);
     }
 
     private Value[] toNative(final Statement s) {

@@ -60,6 +60,14 @@ public interface QueryEngine {
     void setClock(Clock clock);
 
     /**
+     * Sets a policy for removing expired solutions from this query engine.
+     * The policy is triggered after every query or set of statements is added to the query engine.
+     * @param policy a policy which determines when a cleanup operation is executed.
+     *               The default policy executes every 30 seconds, provided that new statements are added.
+     */
+    void setCleanupPolicy(CleanupPolicy policy);
+
+    /**
      * A clock used to determine expiration of queries and solutions
      */
     public static interface Clock {
@@ -71,6 +79,24 @@ public interface QueryEngine {
          * The default implementation uses System.currentTimeMillis().
          */
         long getTime();
+    }
+
+    /**
+     * A policy for removing expired solutions from a query engine
+     */
+    public static interface CleanupPolicy {
+        /**
+         * Determines whether a cleanup operation should be executed
+         * @param secondsElapsedSinceLast the number of seconds elapsed since the last cleanup operation
+         * @param queriesAddedSinceLast the number of queries added to the query engine since the last
+         *                              cleanup operation
+         * @param statementsAddedSinceLast the number of statements added to the query engine since the last
+         *                                 cleanup operation
+         * @return whether a cleanup operation should be executed
+         */
+        boolean doCleanup(int secondsElapsedSinceLast,
+                          int queriesAddedSinceLast,
+                          int statementsAddedSinceLast);
     }
 
     /**

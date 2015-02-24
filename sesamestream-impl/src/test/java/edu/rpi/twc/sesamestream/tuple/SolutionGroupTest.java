@@ -76,13 +76,12 @@ public class SolutionGroupTest {
         assertEquals(7, g.getSolutions().getValue().matchedPatterns);
     }
 
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void testCantAddExpired() throws Exception {
         Solution<String> solExp1 = new Solution<String>(3, 0, bindings, 42);
 
         SolutionGroup<String> g = new SolutionGroup<String>(bindings);
         g.add(solExp1, now);
-        assertTrue(g.getSolutions().isNil());
     }
 
     @Test

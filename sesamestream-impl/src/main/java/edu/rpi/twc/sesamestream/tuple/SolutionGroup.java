@@ -56,10 +56,8 @@ public class SolutionGroup<T> {
      */
     public boolean add(final Solution<T> sol,
                        final long now) {
-        // do not add an expired solution
         if (sol.isExpired(now)) {
-            // TODO: we can assume that added solutions will be unexpired.  Double-check this assumption.
-            return false;
+            throw new IllegalStateException("we shouldn't add an expired solution");
         }
 
         LList<SolutionPattern> cur = solutions, prev = null;
