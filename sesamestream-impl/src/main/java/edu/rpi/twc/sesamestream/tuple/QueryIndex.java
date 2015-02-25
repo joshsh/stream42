@@ -117,6 +117,7 @@ public class QueryIndex<T> {
     /**
      * Consumes a tuple and matches it against any and all applicable queries,
      * possibly producing one or more solutions.
+     * Note: this method is thread-safe; any number of threads may add tuples concurrently.
      *
      * @param tuple   the input tuple
      * @param handler a handler for any solutions produced
@@ -126,10 +127,10 @@ public class QueryIndex<T> {
      * @return whether at least one tuple pattern is applied to the given tuple, changing the state of the query index.
      * If no tuple pattern is applied, the tuple simply passes through.
      */
-    public synchronized boolean add(final T[] tuple,
-                                    final SolutionHandler<T> handler,
-                                    final int ttl,
-                                    final long now) {
+    public boolean add(final T[] tuple,
+                       final SolutionHandler<T> handler,
+                       final int ttl,
+                       final long now) {
         if (rootMetadata.tupleSize != tuple.length) {
             throw new IllegalArgumentException("tuple is not of expected length " + rootMetadata.tupleSize);
         }
@@ -151,10 +152,27 @@ public class QueryIndex<T> {
      *
      * @param now the current time, in milliseconds since the Unix epoch
      */
-    public synchronized void removeExpired(final long now) {
+    public void removeExpired(final long now) {
         long startTime = System.currentTimeMillis();
-        int removedQueries = 0;
         int removedSolutions = 0;
+
+        int removedQueries = removeExpiredQueries(now);
+
+        // for the remaining queries, remove expired solutions
+        for (Query<T> query : rootMetadata.queries) {
+            SolutionIndex<T> index = query.getSolutionIndex();
+            removedSolutions += index.removeExpired(now);
+        }
+
+        if (removedQueries > 0 || removedSolutions > 0) {
+            long endTime = System.currentTimeMillis();
+            logger.info("removed " + removedQueries + " queries and "
+                    + removedSolutions + " solutions in " + (endTime - startTime) + "ms");
+        }
+    }
+
+    private synchronized int removeExpiredQueries(final long now) {
+        int removedQueries = 0;
 
         // identify expired queries
         Collection<Query<T>> toRemove = new LinkedList<Query<T>>();
@@ -169,17 +187,7 @@ public class QueryIndex<T> {
             removedQueries++;
         }
 
-        // for the remaining queries, remove expired solutions
-        for (Query<T> query : rootMetadata.queries) {
-            SolutionIndex<T> index = query.getSolutionIndex();
-            removedSolutions += index.removeExpired(now);
-        }
-
-        if (removedQueries > 0 || removedSolutions > 0) {
-            long endTime = System.currentTimeMillis();
-            logger.info("removed " + removedQueries + " queries and "
-                    + removedSolutions + " solutions in " + (endTime - startTime) + "ms");
-        }
+        return removedQueries;
     }
 
     private void add(final Query.PatternInQuery<T> pattern,
@@ -255,7 +263,7 @@ public class QueryIndex<T> {
                         pattern.getQuery().getPatterns().size(), pattern.getIndex(), b, expirationTime);
 
                 pattern.getQuery().getSolutionIndex().joinSolutions(
-                        matchedSolution, b, solutions, meta.helperStack, now);
+                        matchedSolution, b, solutions, now);
 
                 // Immediately add solutions to the solution index.
                 // As a side-effect, these solutions are available when subsequent patterns of the same query
@@ -303,7 +311,6 @@ public class QueryIndex<T> {
     private static class RootMetadata<T> {
         private final int tupleSize;
         private final PriorityQueue<Query<T>> queries = new PriorityQueue<Query<T>>();
-        private final Stack<Solution<T>> helperStack = new Stack<Solution<T>>();
         private int queryIdCount = 0;
 
         private RootMetadata(final int tupleSize) {

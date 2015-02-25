@@ -106,7 +106,9 @@ public class SolutionGroup<T> {
                 } else {
                     prev.setRest(cur.getRest());
                 }
-                cur = cur.getRest();
+                LList<SolutionPattern> tmp = cur.getRest();
+                cur.setRest(null);
+                cur = tmp;
                 continue;
             }
             prev = cur;

@@ -263,7 +263,6 @@ public class SolutionIndexTest {
                 new Term(null, "x"), new Term("isRedderThan", null), new Term(null, "z")};
         String[] tuple = new String[]{"red", "isRedderThan", "blue"};
         Bindings<String> b = vars.bind(pattern, tuple);
-        Stack<Solution<String>> helper = new Stack<Solution<String>>();
         map1 = new HashMap<String, String>();
         map1.put("x", "red");
         map1.put("z", "blue");
@@ -271,7 +270,7 @@ public class SolutionIndexTest {
         ps1 = new Solution<String>(3, 0, b1, exp);
 
         solutions.clear();
-        index.joinSolutions(ps1, b, solutions, helper, now);
+        index.joinSolutions(ps1, b, solutions, now);
         assertEquals(1, solutions.size());
 
         map2 = new HashMap<String, String>();
@@ -282,7 +281,7 @@ public class SolutionIndexTest {
         index.add(ps2, now);
 
         solutions.clear();
-        index.joinSolutions(ps1, b, solutions, helper, now);
+        index.joinSolutions(ps1, b, solutions, now);
         assertEquals(2, solutions.size());
 
         map2 = new HashMap<String, String>();
@@ -293,7 +292,7 @@ public class SolutionIndexTest {
         index.add(ps2, now);
 
         solutions.clear();
-        index.joinSolutions(ps1, b, solutions, helper, now);
+        index.joinSolutions(ps1, b, solutions, now);
         assertEquals(3, solutions.size());
 
         // add an irrelevant solution
@@ -304,7 +303,7 @@ public class SolutionIndexTest {
         index.add(ps2, now);
 
         solutions.clear();
-        index.joinSolutions(ps1, b, solutions, helper, now);
+        index.joinSolutions(ps1, b, solutions, now);
         assertEquals(3, solutions.size());
 
         // add a solution which is reached through recursion.
@@ -317,7 +316,7 @@ public class SolutionIndexTest {
         index.add(ps2, now);
 
         solutions.clear();
-        index.joinSolutions(ps1, b, solutions, helper, now);
+        index.joinSolutions(ps1, b, solutions, now);
         assertEquals(5, solutions.size());
         Map<Integer, Solution<String>> solutionMap = toMap(solutions);
         // solutions are not unique

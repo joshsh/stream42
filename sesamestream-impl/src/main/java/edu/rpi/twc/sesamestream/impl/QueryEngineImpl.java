@@ -266,10 +266,11 @@ public class QueryEngineImpl implements QueryEngine {
 
         if (cleanupPolicy.doCleanup(seconds, queriesAddedSinceLastCleanup, statementsAddedSinceLastCleanup)) {
             try {
-                queryIndex.removeExpired(now);
                 timeOfLastCleanup = now;
                 queriesAddedSinceLastCleanup = 0;
                 statementsAddedSinceLastCleanup = 0;
+
+                queryIndex.removeExpired(now);
             } catch (Throwable t) {
                 logger.log(Level.SEVERE, "TTL cleanup task failed", t);
             }

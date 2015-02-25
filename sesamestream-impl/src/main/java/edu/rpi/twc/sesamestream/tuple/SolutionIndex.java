@@ -1,6 +1,7 @@
 package edu.rpi.twc.sesamestream.tuple;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -8,6 +9,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * An index of partial and complete solutions for a particular query
@@ -43,7 +45,7 @@ public class SolutionIndex<T> {
      * @return whether the solution was actually added, rather than being ignored due to equality with
      * or containment within another solution which does not expire sooner
      */
-    public boolean add(final Solution<T> s, final long now) {
+    public synchronized boolean add(final Solution<T> s, final long now) {
         Bindings<T> b = s.getBindings();
         int hash = b.getHash();
         SolutionGroup<T> g = groupsByHash.get(hash);
@@ -61,7 +63,8 @@ public class SolutionIndex<T> {
                 }
                 Set<SolutionGroup<T>> groups = groupsByValue.get(e.getValue());
                 if (null == groups) {
-                    groups = new HashSet<SolutionGroup<T>>();
+                    //groups = new HashSet<SolutionGroup<T>>();
+                    groups = newSolutionGroupSet();
                     groupsByValue.put(e.getValue(), groups);
                 }
                 groups.add(g);
@@ -121,15 +124,15 @@ public class SolutionIndex<T> {
      * @param matchedSolution the initial solution produced by matching the tuple pattern against the tuple
      * @param bindings        a set of bindings
      * @param solutions       a stack of solutions which will be cleared, and to which solutions will be added
-     * @param helper          a secondary stack for use in computation. It will be cleared.
      */
     public void joinSolutions(final Solution<T> matchedSolution,
                               final Bindings<T> bindings,
                               final Stack<Solution<T>> solutions,
-                              final Stack<Solution<T>> helper,
                               final long now) {
         solutions.clear();
-        helper.clear();
+
+        // TODO: would it make sense to pool this object?
+        Stack<Solution<T>> helper = new Stack<Solution<T>>();
 
         // The original solution is among the solutions produced. We assume that it is unexpired.
         solutions.push(matchedSolution);
@@ -167,8 +170,10 @@ public class SolutionIndex<T> {
      * @param now the current time, in milliseconds since the Unix epoch
      * @return the number of solutions removed
      */
-    public int removeExpired(final long now) {
+    public synchronized int removeExpired(final long now) {
         int count = 0;
+
+        //System.out.println("removing from " + groupsByHash.size() + " solution groups");
 
         Collection<SolutionGroup<T>> toRemove = new LinkedList<SolutionGroup<T>>();
 
@@ -212,11 +217,19 @@ public class SolutionIndex<T> {
         return groupsByValue.get(value);
     }
 
+    private Set<SolutionGroup<T>> newSolutionGroupSet() {
+        // Use a thread-safe set so that we can provide iterators over solution groups
+        // while also adding to and removing from the groups.
+        Map<SolutionGroup<T>, Boolean> map = new ConcurrentHashMap<SolutionGroup<T>, Boolean>();
+        return Collections.newSetFromMap(map);
+    }
+
     private static class SolutionIterator<T> implements Iterator<Solution<T>> {
         // note: solution is mutated on each call to next().  Read but do not store the object.
         private final Solution<T> solution = new Solution<T>(0, 0, null, 0);
 
         private final Iterator<SolutionGroup<T>> groupIterator;
+        private SolutionGroup<T> currentGroup;
         private LList<SolutionPattern> currentSolutions;
         private boolean advanced;
         private final long now;
@@ -258,16 +271,16 @@ public class SolutionIndex<T> {
 
         private void advance() {
             if (null != currentSolutions) {
-                setCurrentSolutions(currentSolutions.getRest());
+                setCurrentSolutions(getRest(currentSolutions));
             }
 
             // note: the loop tolerates empty groups, although these should not occur
             while (null == currentSolutions || currentSolutions.isNil()) {
                 if (groupIterator.hasNext()) {
-                    SolutionGroup<T> g = groupIterator.next();
-                    setCurrentSolutions(g.getSolutions());
+                    currentGroup = groupIterator.next();
+                    setCurrentSolutions(currentGroup.getSolutions());
                     // update the bindings of the current solution whenever we enter a new group
-                    solution.setBindings(g.getBindings());
+                    solution.setBindings(currentGroup.getBindings());
                 } else {
                     break;
                 }
@@ -281,8 +294,20 @@ public class SolutionIndex<T> {
 
             // skip expired solutions.  For now, we don't remove them, as we don't want empty groups and indices.
             while (!currentSolutions.isNil() && currentSolutions.getValue().isExpired(now)) {
-                currentSolutions = currentSolutions.getRest();
+                currentSolutions = getRest(currentSolutions);
             }
+        }
+
+        private LList<SolutionPattern> getRest(final LList<SolutionPattern> sols) {
+            LList<SolutionPattern> rest = sols.getRest();
+
+            // This can occur if the group is concurrently modified;
+            // we start over at the beginning of the list if it happens, possibly producing duplicate solutions
+            if (null == rest) {
+                rest = currentGroup.getSolutions();
+            }
+
+            return rest;
         }
     }
 
