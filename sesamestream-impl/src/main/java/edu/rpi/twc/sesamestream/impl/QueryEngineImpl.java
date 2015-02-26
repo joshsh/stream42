@@ -56,9 +56,6 @@ import java.util.logging.Logger;
 public class QueryEngineImpl implements QueryEngine {
     private static final Logger logger = Logger.getLogger(QueryEngineImpl.class.getName());
 
-    private static final long TTL_CLEANUP_INITIAL_DELAY_MS = 5000;
-    private static final long TTL_CLEANUP_PERIOD_MS = 30000;
-
     private final QueryIndex<Value> queryIndex;
 
     private final QueryIndex.SolutionHandler<Value> solutionHandler;
@@ -91,6 +88,9 @@ public class QueryEngineImpl implements QueryEngine {
     private final FilterEvaluator filterEvaluator;
 
     private final Map<String, SubscriptionImpl> subscriptions = new HashMap<String, SubscriptionImpl>();
+
+    private final Object cleanupLock = "";
+    private long cleanupNow;
 
     /**
      * Creates a new query engine with an empty index
@@ -129,6 +129,27 @@ public class QueryEngineImpl implements QueryEngine {
         };
 
         clear();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while (true) {
+                        synchronized (cleanupLock) {
+                            try {
+                                cleanupLock.wait();
+                            } catch (InterruptedException e) {
+                                logger.warning("interrupted while waiting on TTL cleanup lock");
+                            }
+                        }
+
+                        queryIndex.removeExpired(cleanupNow);
+                    }
+                } catch (Throwable t) {
+                    logger.log(Level.SEVERE, "TTL cleanup thread failed", t);
+                }
+            }
+        }).start();
     }
 
     public void setClock(final Clock clock) {
@@ -175,17 +196,6 @@ public class QueryEngineImpl implements QueryEngine {
         this.linkedDataCache = cache;
         this.linkedDataCache.setAutoCommit(true);
         this.linkedDataCacheConnection = sail.getConnection();
-    }
-
-    /**
-     * Gets the index, or in-memory database, of this query engine
-     *
-     * @return the index, or in-memory database, of this query engine.
-     * It should not be necessary to interact with the index directly, but it is possible to inspect the index via
-     * print and visit methods.
-     */
-    public QueryIndex<Value> getIndex() {
-        return queryIndex;
     }
 
     public void clear() {
@@ -261,18 +271,17 @@ public class QueryEngineImpl implements QueryEngine {
         checkCleanup(clock.getTime());
     }
 
-    private void checkCleanup(final long now) {
+    private synchronized void checkCleanup(final long now) {
         int seconds = (int) ((now - timeOfLastCleanup) / 1000);
 
         if (cleanupPolicy.doCleanup(seconds, queriesAddedSinceLastCleanup, statementsAddedSinceLastCleanup)) {
-            try {
-                timeOfLastCleanup = now;
-                queriesAddedSinceLastCleanup = 0;
-                statementsAddedSinceLastCleanup = 0;
+            timeOfLastCleanup = now;
+            queriesAddedSinceLastCleanup = 0;
+            statementsAddedSinceLastCleanup = 0;
+            cleanupNow = now;
 
-                queryIndex.removeExpired(now);
-            } catch (Throwable t) {
-                logger.log(Level.SEVERE, "TTL cleanup task failed", t);
+            synchronized (cleanupLock) {
+                cleanupLock.notify();
             }
         }
     }
