@@ -103,8 +103,7 @@ public class TestRunner {
                 continue;
             }
 
-            //StatementListBuilder h = new StatementListBuilder();
-            RDFHandler h = engine.createRDFHandler(TUPLE_TTL);
+            RDFHandler handler = engine.createRDFHandler(TUPLE_TTL);
 
             InputStream in = new FileInputStream(new File(f));
             try {
@@ -112,7 +111,7 @@ public class TestRunner {
                 p.setValueFactory(new ErrorTolerantValueFactory(new ValueFactoryImpl()));
                 p.setStopAtFirstError(false);
                 p.setVerifyData(false);
-                p.setRDFHandler(h);
+                p.setRDFHandler(handler);
                 try {
                     p.parse(in, baseUri);
                 } catch (RDFParseException e) {
@@ -121,12 +120,9 @@ public class TestRunner {
             } finally {
                 in.close();
             }
-
-            //for (Statement s : h.getStatements()) {
-            //    engine.addStatement(s);
-            //}
         }
 
+        engine.shutDown();
         System.out.println("RUN\t" + System.currentTimeMillis() + "\tfinished");
     }
 

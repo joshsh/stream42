@@ -44,7 +44,7 @@ public class Query<T> implements Comparable<Query<T>> {
         } else if (patterns.size() > 32) {
             // because we create an integer-sized bit field of matched patterns
             throw new IllegalArgumentException(
-                    "too many tuple patterns; implementation limit is 32 per graph pattern");
+                    "too many tuple patterns; implementation limit is 32 per query");
         }
 
         this.patterns = new LinkedList<PatternInQuery<T>>();

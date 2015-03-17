@@ -91,6 +91,7 @@ public class QueryEngineImpl implements QueryEngine {
 
     private final Object cleanupLock = "";
     private long cleanupNow;
+    private boolean active = true;
 
     /**
      * Creates a new query engine with an empty index
@@ -141,6 +142,11 @@ public class QueryEngineImpl implements QueryEngine {
                             } catch (InterruptedException e) {
                                 logger.warning("interrupted while waiting on TTL cleanup lock");
                             }
+                        }
+
+                        // terminated
+                        if (!active) {
+                            return;
                         }
 
                         queryIndex.removeExpired(cleanupNow);
@@ -269,6 +275,15 @@ public class QueryEngineImpl implements QueryEngine {
         }
 
         checkCleanup(clock.getTime());
+    }
+
+    public synchronized void shutDown() {
+        active = false;
+
+        // terminate the cleanup thread
+        synchronized (cleanupLock) {
+            cleanupLock.notify();
+        }
     }
 
     private synchronized void checkCleanup(final long now) {

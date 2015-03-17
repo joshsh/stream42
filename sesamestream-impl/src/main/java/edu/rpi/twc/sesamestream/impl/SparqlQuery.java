@@ -107,7 +107,7 @@ public class SparqlQuery {
     }
 
     /**
-     * @return the query form of this query (ASK, CONSTRUCT, DECRIBE, or SELECT)
+     * @return the query form of this query (ASK, CONSTRUCT, DESCRIBE, or SELECT)
      */
     public QueryForm getQueryForm() {
         return queryForm;
@@ -159,7 +159,7 @@ public class SparqlQuery {
 
     /**
      * Gets the order-preserving list of variable names
-     * @return
+     * @return the order-preserving list of variable names
      */
     public Collection<String> getBindingNames() {
         return bindingNames;

@@ -137,10 +137,6 @@ public class QueryIndex<T> {
 
         long expirationTime = ttl > 0 ? now + 1000L * ttl : 0;
 
-        // Calculate all new partial solutions and save them in a buffer until all matching tuple patterns have been
-        // applied to the tuple.
-        // Do not allow solutions created while processing one tuple pattern to be accessible while processing
-        // the next.
         return add(tuple, rootMetadata, handler, expirationTime, now, 0);
     }
 
