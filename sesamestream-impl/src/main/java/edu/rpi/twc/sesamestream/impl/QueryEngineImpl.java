@@ -229,6 +229,16 @@ public class QueryEngineImpl implements QueryEngine {
             throw new InvalidQueryException(e);
         }
 
+        // invalidate the Linked Data cache when a new query is added, as the evaluation of the new query may
+        // require statements from data sources which have already been processed
+        if (null != linkedDataCache) {
+            try {
+                linkedDataCache.clear();
+            } catch (RippleException e) {
+                logger.log(Level.SEVERE, "failed to clear Linked Data cache when adding a query", e);
+            }
+        }
+
         return addQuery(ttl, query.getTupleExpr(), handler);
     }
 
