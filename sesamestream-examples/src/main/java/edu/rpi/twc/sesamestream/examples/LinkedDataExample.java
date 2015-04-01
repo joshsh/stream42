@@ -25,9 +25,9 @@ public class LinkedDataExample {
                 "PREFIX dbr: <http://dbpedia.org/resource/>\n" +
                 "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n" +
                 "SELECT ?actor ?indicated WHERE {\n" +
-                "?a activity:thingIndicated ?indicated .\n" +
-                "?a activity:actor ?actor .\n" +
-                "?indicated dbo:author dbr:Douglas_Adams .\n" +
+                "    ?a activity:thingIndicated ?indicated .\n" +
+                "    ?a activity:actor ?actor .\n" +
+                "    ?indicated dbo:author dbr:Douglas_Adams .\n" +
                 "}";
 
         // An RDF graph representing an event. Normally, this would come from a dynamic data source.
@@ -92,6 +92,11 @@ public class LinkedDataExample {
         parser.setRDFHandler(queryEngine.createRDFHandler(eventTtl));
         // As new statements are added, computed query answers will be pushed to the BindingSetHandler
         parser.parse(new ByteArrayInputStream(eventData.getBytes()), "");
+
+        // wait for HTTP operations to finish
+        synchronized (Thread.currentThread()) {
+            Thread.currentThread().wait(10000);
+        }
 
         // Cancel the query subscription at any time;
         // no further answers will be computed/produced for the corresponding query.

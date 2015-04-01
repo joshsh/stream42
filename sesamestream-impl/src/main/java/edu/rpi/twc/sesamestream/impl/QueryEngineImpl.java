@@ -33,7 +33,6 @@ import org.openrdf.query.parser.QueryParserUtil;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.sail.Sail;
-import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailException;
 
 import java.util.HashMap;
@@ -41,6 +40,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -68,7 +69,6 @@ public class QueryEngineImpl implements QueryEngine {
     private int statementsAddedSinceLastCleanup = 0;
 
     private LinkedDataCache linkedDataCache;
-    private SailConnection linkedDataCacheConnection;
 
     private boolean logHasChanged = false;
 
@@ -92,6 +92,10 @@ public class QueryEngineImpl implements QueryEngine {
     private final Object cleanupLock = "";
     private long cleanupNow;
     private boolean active = true;
+
+    private ExecutorService linkedDataService;
+    // note: these threads are in addition to any threads created externally
+    private final int httpThreadPoolSize = Runtime.getRuntime().availableProcessors() + 1;
 
     /**
      * Creates a new query engine with an empty index
@@ -201,7 +205,12 @@ public class QueryEngineImpl implements QueryEngine {
                                    final Sail sail) throws SailException {
         this.linkedDataCache = cache;
         this.linkedDataCache.setAutoCommit(true);
-        this.linkedDataCacheConnection = sail.getConnection();
+
+        if (null != linkedDataService) {
+            linkedDataService.shutdown();
+        }
+
+        linkedDataService = Executors.newFixedThreadPool(httpThreadPoolSize);
     }
 
     public void clear() {
@@ -232,11 +241,7 @@ public class QueryEngineImpl implements QueryEngine {
         // invalidate the Linked Data cache when a new query is added, as the evaluation of the new query may
         // require statements from data sources which have already been processed
         if (null != linkedDataCache) {
-            try {
-                linkedDataCache.clear();
-            } catch (RippleException e) {
-                logger.log(Level.SEVERE, "failed to clear Linked Data cache when adding a query", e);
-            }
+            clearLinkedDataCache();
         }
 
         return addQuery(ttl, query.getTupleExpr(), handler);
@@ -415,6 +420,14 @@ public class QueryEngineImpl implements QueryEngine {
         return new Query<Value>(patterns, expirationTime);
     }
 
+    private void clearLinkedDataCache() {
+        try {
+            linkedDataCache.clear();
+        } catch (RippleException e) {
+            logger.log(Level.SEVERE, "failed to clear Linked Data cache when adding a query", e);
+        }
+    }
+
     private void triggerLinkedDataCache(final Value[] tuple) {
         if (tuple.length >= 1) {
             Value subject = tuple[0];
@@ -447,20 +460,24 @@ public class QueryEngineImpl implements QueryEngine {
         }
     }
 
+    // note: as the indexing of Linked Data URIs may trigger the fetching and rdfization of data sources,
+    // and as this occurs a pooled thread distinct from calling thread, query answers may be produced in that thread.
     private void indexLinkedDataUri(final URI uri) {
-        try {
-            linkedDataCacheConnection.begin();
+        if (isHttpUri(uri)) {
+            CacheEntry.Status status;
             try {
-                CacheEntry.Status status = linkedDataCache.retrieveUri(uri, linkedDataCacheConnection);
-                linkedDataCacheConnection.commit();
-            } finally {
-                linkedDataCacheConnection.rollback();
+                status = linkedDataCache.retrieveUri(uri, linkedDataCache.getSailConnection());
+            } catch (RippleException e) {
+                status = CacheEntry.Status.Failure;
+                logger.log(Level.SEVERE, "Ripple exception while dereferencing URI " + uri, e);
             }
-        } catch (RippleException e) {
-            logger.log(Level.SEVERE, "Ripple exception while dereferencing URI " + uri, e);
-        } catch (SailException e) {
-            logger.log(Level.SEVERE, "Sail exception while dereferencing URI " + uri, e);
         }
+    }
+
+    // pre-filter URIs so as to avoid needlessly creating executor tasks
+    private boolean isHttpUri(final URI uri) {
+        String s = uri.stringValue();
+        return s.startsWith("http://") || s.startsWith("https://");
     }
 
     private void handleCandidateSolution(final String id,
