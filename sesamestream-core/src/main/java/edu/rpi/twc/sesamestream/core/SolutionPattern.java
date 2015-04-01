@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream.tuple;
+package edu.rpi.twc.sesamestream.core;
 
 /**
  * An object representing the subset of tuple patterns of a query which have already been matched.

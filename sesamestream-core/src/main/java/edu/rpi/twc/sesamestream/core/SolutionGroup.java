@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream.tuple;
+package edu.rpi.twc.sesamestream.core;
 
 /**
  * A group of solutions with identical bindings but potentially different sets of matched tuple patterns.

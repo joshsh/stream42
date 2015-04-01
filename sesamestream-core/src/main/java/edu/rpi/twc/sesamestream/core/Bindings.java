@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream.tuple;
+package edu.rpi.twc.sesamestream.core;
 
 import java.util.HashMap;
 import java.util.Map;

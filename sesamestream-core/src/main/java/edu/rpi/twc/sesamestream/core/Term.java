@@ -1,4 +1,4 @@
-package edu.rpi.twc.sesamestream.tuple;
+package edu.rpi.twc.sesamestream.core;
 
 /**
  * A value or variable, analogous to an RDF Term or query variable in the sense of SPARQL

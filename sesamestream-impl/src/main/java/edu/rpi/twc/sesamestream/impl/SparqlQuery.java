@@ -1,9 +1,8 @@
 package edu.rpi.twc.sesamestream.impl;
 
 import edu.rpi.twc.sesamestream.QueryEngine;
-import edu.rpi.twc.sesamestream.tuple.LList;
-import edu.rpi.twc.sesamestream.tuple.Query;
-import edu.rpi.twc.sesamestream.tuple.Term;
+import edu.rpi.twc.sesamestream.core.LList;
+import edu.rpi.twc.sesamestream.core.Term;
 import org.openrdf.model.Value;
 import org.openrdf.query.algebra.DescribeOperator;
 import org.openrdf.query.algebra.Distinct;

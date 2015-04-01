@@ -2,7 +2,7 @@ package edu.rpi.twc.sesamestream.impl;
 
 import edu.rpi.twc.sesamestream.BindingSetHandler;
 import edu.rpi.twc.sesamestream.Subscription;
-import edu.rpi.twc.sesamestream.tuple.Query;
+import edu.rpi.twc.sesamestream.core.Query;
 import org.openrdf.model.Value;
 
 /**
