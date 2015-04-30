@@ -1,14 +1,12 @@
-<!-- This README can be viewed at https://github.com/joshsh/sesamestream/wiki -->
+<!-- This README can be viewed at https://github.com/joshsh/rdfstream4j/wiki -->
 
-## SesameStream
+## RDFStream4j
 
-![SesameStream logo|width=94px|height=65px](https://github.com/joshsh/sesamestream/wiki/graphics/sesamestream-logo-small.png)
+![RDFStream4j logo|width=94px|height=65px](https://github.com/joshsh/rdfstream4j/wiki/graphics/sesamestream-logo-small.png)
 
-SesameStream is a continuous SPARQL query engine for real-time applications, built with the [Sesame](http://www.openrdf.org/) RDF framework.  It implements an open-world subset (see below) of the [SPARQL](http://www.w3.org/TR/sparql11-query/) query language and matches streaming RDF data against queries with low latency, responding to individual statements with the query answers they complete.  The query engine conserves resources by indexing only those statements which match against already-submitted queries, making it appropriate for processing long, noisy data streams.  SesameStream was developed for use in [wearable and ubiquitous computing](https://github.com/joshsh/extendo) contexts in which short-lived sensor data is combined with long-lived background semantics under real time constraints of a few tens of milliseconds.
+RDFStream4j is an in-memory continuous SPARQL query engine built with the [Sesame](http://rdf4j.org/) RDF framework (soon to be [RDF4j](https://projects.eclipse.org/proposals/rdf4j)).  It implements an open-world subset (see below) of the [SPARQL](http://www.w3.org/TR/sparql11-query/) query language and uses an incremental technique based on the [symmetric hash join](http://en.wikipedia.org/wiki/Symmetric_Hash_Join), responding to streaming RDF statements as soon as possible with SPARQL query answers and discarding irrelevant statements.  RDFStream4j uses [time-to-live](http://en.wikipedia.org/wiki/Time_to_live) to process infinite streams of data: queries time out and are removed unless renewed, while partial solutions to queries exist in the query engine only as long as their shortest-lived statement, making room for fresh data as they expire.
 
-SesameStream is distinguished by its time-to-live features, according to which queries and source statements enter the system with an individual period of validity.  Once a query expires, it ceases to match against incoming data, and its resources are freed.  When a statement expires, any intermediate results it was used to compute become unavailable for new joins and are removed as soon as possible, making room for fresh data.
-
-Below is a usage example in Java.  See the [source code](https://github.com/joshsh/sesamestream/blob/master/sesamestream-examples/src/main/java/edu/rpi/twc/sesamestream/examples/BasicExample.java) for the full example.
+Below is a usage example in Java.  See the [source code](https://github.com/joshsh/rdfstream4j/blob/master/rdfstream4j-examples/src/main/java/edu/rpi/twc/rdfstream4j/examples/BasicExample.java) for the full example.
 
 ```java
 // A query for things written by Douglas Adams which are referenced with a pointing gesture
@@ -61,7 +59,7 @@ Subscription sub = queryEngine.addQuery(queryTtl, query, handler);
 // Results derived from this data will never expire.
 int staticTtl = 0;
 
-// Add some static background knowledge.  Alternatively, let SesameStream discover this
+// Add some static background knowledge.  Alternatively, let RDFStream4j discover this
 // information as Linked Data (see LinkedDataExample.java).
 Statement st = new StatementImpl(
         new URIImpl("http://dbpedia.org/resource/The_Meaning_of_Liff"),
@@ -87,7 +85,7 @@ sub.cancel();
 sub.renew(10 * 60);
 ```
 
-See also the [Linked Data example](https://github.com/joshsh/sesamestream/blob/master/sesamestream-examples/src/main/java/edu/rpi/twc/sesamestream/examples/LinkedDataExample.java); here, we replace the above "hard-coded" background semantics with discovered information which the query engine proactively [fetches from the Web](https://github.com/joshsh/ripple/wiki/LinkedDataSail):
+See also the [Linked Data example](https://github.com/joshsh/rdfstream4j/blob/master/rdfstream4j-examples/src/main/java/edu/rpi/twc/rdfstream4j/examples/LinkedDataExample.java); here, we replace the above "hard-coded" background semantics with discovered information which the query engine proactively [fetches from the Web](https://github.com/joshsh/ripple/wiki/LinkedDataSail):
 
 ```java
 // Create a Linked Data client and metadata store.  The Sesame triple store will be used for
@@ -105,29 +103,29 @@ cache.setDataStore(store);
 queryEngine.setLinkedDataCache(cache, sail);
 ```
 
-For projects which use Maven, SesameStream snapshots and release packages can be imported by adding configuration like the following to the project's POM:
+For projects which use Maven, RDFStream4j snapshots and release packages can be imported by adding configuration like the following to the project's POM:
 
 ```xml
     <dependency>
-        <groupId>edu.rpi.twc.sesamestream</groupId>
-        <artifactId>sesamestream-impl</artifactId>
-        <version>1.1-SNAPSHOT</version>
+        <groupId>edu.rpi.twc.rdfstream4j</groupId>
+        <artifactId>rdfstream4j-impl</artifactId>
+        <version>1.3-SNAPSHOT</version>
     </dependency>
 ```
 
-or if you will implement the API (e.g. for a SesameStream proxy),
+or if you will implement the API (e.g. for an RDFStream4j proxy),
 
 ```xml
     <dependency>
-        <groupId>edu.rpi.twc.sesamestream</groupId>
-        <artifactId>sesamestream-api</artifactId>
+        <groupId>edu.rpi.twc.rdfstream4j</groupId>
+        <artifactId>rdfstream4j-api</artifactId>
         <version>1.1-SNAPSHOT</version>
     </dependency>
 ```
 
 The latest Maven packages can be browsed [here](http://search.maven.org/#search%7Cga%7C1%7Csesamestream).
 See also:
-* [SesameStream API](http://fortytwo.net/projects/sesamestream/api/latest/index.html)
+* [RDFStream4j API](http://fortytwo.net/projects/rdfstream4j/api/latest/index.html)
 
 Send questions or comments to:
 
@@ -136,8 +134,8 @@ Send questions or comments to:
 
 ### Syntax reference
 
-SPARQL syntax currently supported by SesameStream includes:
-* [SELECT](http://www.w3.org/TR/sparql11-query/#select) queries.  SELECT subscriptions in SesameStream produce query answers indefinitely unless cancelled.
+SPARQL syntax currently supported by RDFStream4j includes:
+* [SELECT](http://www.w3.org/TR/sparql11-query/#select) queries.  SELECT subscriptions in RDFStream4j produce query answers indefinitely unless cancelled.
 * [ASK](http://www.w3.org/TR/sparql11-query/#ask) queries.  ASK subscriptions produce at most one query answer (indicating a result of **true**) and then are cancelled automatically, similarly to a SELECT query with a LIMIT of 1.
 * [CONSTRUCT](http://www.w3.org/TR/sparql11-query/#construct) queries.  Each query answer contains "subject", "predicate", and "object" bindings which may be turned into an RDF statement.
 * [basic graph patterns](http://www.w3.org/TR/sparql11-query/#BasicGraphPatterns)
@@ -145,12 +143,12 @@ SPARQL syntax currently supported by SesameStream includes:
 * all [RDF Term syntax](http://www.w3.org/TR/sparql11-query/#syntaxTerms) and [triple pattern](http://www.w3.org/TR/sparql11-query/#QSynTriples) syntax via Sesame
 * [FILTER](http://www.w3.org/TR/sparql11-query/#tests) constraints, with all SPARQL [operator functions](http://www.w3.org/TR/sparql11-query/#SparqlOps) supported via Sesame **except for** [EXISTS](http://www.w3.org/TR/sparql11-query/#func-filter-exists)
 * [DISTINCT](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier.  Use with care if the streaming data source may produce an unlimited number of solutions.
-* [REDUCED](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier.  Similar to DISTINCT, but safe for long streams.  Each subscription maintains a solution set which begins to recycle after it reaches a certain size, configurable with `SesameStream.setReducedModifierCapacity()`.
+* [REDUCED](http://www.w3.org/TR/sparql11-query/#modDuplicates) modifier.  Similar to DISTINCT, but safe for long streams.  Each subscription maintains a solution set which begins to recycle after it reaches a certain size, configurable with `RDFStream4j.setReducedModifierCapacity()`.
 * [LIMIT](http://www.w3.org/TR/sparql11-query/#modResultLimit) clause.  Once LIMIT number of answers have been produced, the subscription is cancelled.
 * [OFFSET](http://www.w3.org/TR/sparql11-query/#modOffset) clause.  Since query answers roughly follow the order in which input statements are received, OFFSET can be practically useful even without ORDER BY (see below)
 
 Syntax explicitly not supported:
-* [ORDER BY](http://www.w3.org/TR/sparql11-query/#modOrderBy).  This is a closed-world operation which requires a finite data set or window; SesameStream queries over a stream of data and an infinite window.
+* [ORDER BY](http://www.w3.org/TR/sparql11-query/#modOrderBy).  This is a closed-world operation which requires a finite data set or window; RDFStream4j queries over a stream of data and an infinite window.
 * SPARQL 1.1 [aggregates](http://www.w3.org/TR/sparql11-query/#aggregates).  See above
 
 Syntax not yet supported:
