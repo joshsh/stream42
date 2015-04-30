@@ -429,16 +429,24 @@ public class QueryEngineImpl implements QueryEngine {
     }
 
     private void triggerLinkedDataCache(final Value[] tuple) {
-        if (tuple.length >= 1) {
+        if (tuple.length >= 3) {
             Value subject = tuple[0];
-            if (subject instanceof URI) {
-                indexLinkedDataUri((URI) subject);
-            }
+            Value object = tuple[2];
 
-            if (tuple.length >= 3) {
-                Value object = tuple[2];
-                if (object instanceof URI) {
+            if (subject instanceof URI && object instanceof URI) {
+                boolean subjectExists, objectExists;
+                try {
+                    subjectExists = null != linkedDataCache.peek((URI) subject, linkedDataCache.getSailConnection());
+                    objectExists = null != linkedDataCache.peek((URI) object, linkedDataCache.getSailConnection());
+                } catch (RippleException e) {
+                    logger.log(Level.SEVERE, "Ripple exception while dereferencing (" + subject + "," + object + ")");
+                    return;
+                }
+
+                if (subjectExists && !objectExists) {
                     indexLinkedDataUri((URI) object);
+                } else if (objectExists && !subjectExists) {
+                    indexLinkedDataUri((URI) subject);
                 }
             }
         }
@@ -464,13 +472,15 @@ public class QueryEngineImpl implements QueryEngine {
     // and as this occurs a pooled thread distinct from calling thread, query answers may be produced in that thread.
     private void indexLinkedDataUri(final URI uri) {
         if (isHttpUri(uri)) {
-            CacheEntry.Status status;
-            try {
-                status = linkedDataCache.retrieveUri(uri, linkedDataCache.getSailConnection());
-            } catch (RippleException e) {
-                status = CacheEntry.Status.Failure;
-                logger.log(Level.SEVERE, "Ripple exception while dereferencing URI " + uri, e);
-            }
+            linkedDataService.execute(new Runnable() {
+                public void run() {
+                    try {
+                        linkedDataCache.retrieve(uri, linkedDataCache.getSailConnection());
+                    } catch (RippleException e) {
+                        logger.log(Level.SEVERE, "Ripple exception while dereferencing URI " + uri, e);
+                    }
+                }
+            });
         }
     }
 

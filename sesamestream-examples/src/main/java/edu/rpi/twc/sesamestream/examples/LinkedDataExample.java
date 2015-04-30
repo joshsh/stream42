@@ -56,7 +56,7 @@ public class LinkedDataExample {
         // Define a handler for answers to the query.
         BindingSetHandler handler = new BindingSetHandler() {
             public void handle(final BindingSet answer) {
-                System.out.println("found an answer to the query: " + answer);
+                System.out.println("answer at " + System.currentTimeMillis() + ": " + answer);
             }
         };
 
