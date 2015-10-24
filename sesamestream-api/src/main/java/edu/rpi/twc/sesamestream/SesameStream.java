@@ -7,6 +7,11 @@ package edu.rpi.twc.sesamestream;
  */
 public class SesameStream {
 
+    /**
+     * A special time-to-live value for statements or queries which are valid indefinitely.
+     */
+    public static final int INFINITE_TTL = 0;
+
     // static variables for use by SesameStream implementations (including wrappers and proxies)
     private static boolean performanceMetrics = false;
     private static boolean debug = false;

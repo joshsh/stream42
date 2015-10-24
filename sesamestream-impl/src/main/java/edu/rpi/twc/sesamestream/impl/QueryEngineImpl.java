@@ -416,7 +416,7 @@ public class QueryEngineImpl implements QueryEngine {
             tPatterns = tPatterns.getRest();
         }
 
-        long expirationTime = 0 == ttl ? 0 : now + 1000L * ttl;
+        long expirationTime = SesameStream.INFINITE_TTL == ttl ? 0 : now + 1000L * ttl;
         return new Query<Value>(patterns, expirationTime);
     }
 

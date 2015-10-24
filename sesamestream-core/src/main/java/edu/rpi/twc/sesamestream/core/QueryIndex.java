@@ -19,6 +19,9 @@ import java.util.logging.Logger;
 public class QueryIndex<T> {
     private static final Logger logger = Logger.getLogger(QueryIndex.class.getName());
 
+    // note: see also SesameStream.INFINITE_TTL
+    private static final int INFINITE_TTL = 0;
+
     // the "leaves" of this index
     private Set<Query.PatternInQuery<T>> patterns;
     // child indices matching specific values
@@ -107,7 +110,7 @@ public class QueryIndex<T> {
      */
     public synchronized void renew(final Query<T> query, final int ttl, final long now) {
         // assign a new expiration time to the graph pattern
-        query.setExpirationTime(0 == ttl ? 0 : now + 1000L * ttl);
+        query.setExpirationTime(INFINITE_TTL == ttl ? 0 : now + 1000L * ttl);
 
         // re-order the queue of patterns
         rootMetadata.queries.remove(query);
@@ -135,7 +138,7 @@ public class QueryIndex<T> {
             throw new IllegalArgumentException("tuple is not of expected length " + rootMetadata.tupleSize);
         }
 
-        long expirationTime = ttl > 0 ? now + 1000L * ttl : 0;
+        long expirationTime = INFINITE_TTL == ttl ? 0 : now + 1000L * ttl;
 
         return add(tuple, rootMetadata, handler, expirationTime, now, 0);
     }
