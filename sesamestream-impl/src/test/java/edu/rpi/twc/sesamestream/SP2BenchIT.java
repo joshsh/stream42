@@ -17,12 +17,12 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class SP2BenchTest extends QueryEngineTestBase {
+public class SP2BenchIT extends QueryEngineTestBase {
     private static final boolean DEBUG = true;
 
     private final List<Statement> data;
 
-    public SP2BenchTest() throws Exception {
+    public SP2BenchIT() throws Exception {
         data = loadData("/tmp/sp2bench-50000.nt");
     }
 

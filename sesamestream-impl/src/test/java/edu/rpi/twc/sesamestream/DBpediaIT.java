@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class DBpediaTest extends QueryEngineTestBase {
+public class DBpediaIT extends QueryEngineTestBase {
 
     @Before
     public void setUp() throws Exception {
