@@ -9,16 +9,16 @@
         <version>7</version>
     </parent>
 
-    <groupId>edu.rpi.twc.sesamestream</groupId>
-    <artifactId>sesamestream-all</artifactId>
+    <groupId>net.fortytwo.stream</groupId>
+    <artifactId>stream42-all</artifactId>
     <version>1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>SesameStream</name>
-    <description>Continuous SPARQL query framework</description>
-    <url>https://github.com/joshsh/sesamestream</url>
+    <name>Stream42</name>
+    <description>data stream processor for graphs</description>
+    <url>https://github.com/joshsh/stream42</url>
 
     <issueManagement>
-        <url>https://github.com/joshsh/sesamestream/issues</url>
+        <url>https://github.com/joshsh/stream42/issues</url>
         <system>GitHub Issues</system>
     </issueManagement>
 
@@ -31,9 +31,9 @@
     </licenses>
 
     <scm>
-        <url>git@github.com:joshsh/sesamestream.git</url>
-        <connection>scm:git:git@github.com:joshsh/sesamestream.git</connection>
-        <developerConnection>scm:git:git@github.com:joshsh/sesamestream.git</developerConnection>
+        <url>git@github.com:joshsh/stream42.git</url>
+        <connection>scm:git:git@github.com:joshsh/stream42.git</connection>
+        <developerConnection>scm:git:git@github.com:joshsh/stream42.git</developerConnection>
     </scm>
 
     <developers>
@@ -48,15 +48,14 @@
         <junit.version>4.12</junit.version>
         <ripple.version>1.3</ripple.version>
         <sesame.version>2.7.14</sesame.version>
-        <sesamestream.version>1.1-SNAPSHOT</sesamestream.version>
         <sesametools.version>1.9</sesametools.version>
+        <stream42.version>1.1-SNAPSHOT</stream42.version>
     </properties>
 
     <modules>
-        <module>sesamestream-api</module>
-        <module>sesamestream-core</module>
-        <module>sesamestream-impl</module>
-        <module>sesamestream-examples</module>
+        <module>stream42-core</module>
+        <module>stream42-sparql</module>
+        <module>stream42-examples</module>
     </modules>
 
     <build>
@@ -68,9 +67,8 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>2.5.1</version>
                     <configuration>
-                        <!-- keep at 1.6 for the sake of compatibility -->
-                        <source>1.6</source>
-                        <target>1.6</target>
+                        <source>1.7</source>
+                        <target>1.7</target>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -86,7 +84,7 @@
                                 <rules>
                                     <DependencyConvergence />
                                     <requireJavaVersion>
-                                        <version>[1.6,1.8]</version>
+                                        <version>[1.7, 1.8]</version>
                                     </requireJavaVersion>
                                 </rules>
                             </configuration>
