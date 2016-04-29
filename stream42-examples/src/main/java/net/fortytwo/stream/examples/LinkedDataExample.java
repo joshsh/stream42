@@ -2,6 +2,7 @@ package net.fortytwo.stream.examples;
 
 import net.fortytwo.stream.StreamProcessor;
 import net.fortytwo.stream.Subscription;
+import net.fortytwo.stream.sparql.SparqlStreamProcessor;
 import net.fortytwo.stream.sparql.impl.caching.CachingSparqlStreamProcessor;
 import net.fortytwo.linkeddata.LinkedDataCache;
 import org.openrdf.query.BindingSet;
@@ -46,7 +47,7 @@ public class LinkedDataExample {
                 "    tl:at \"2015-02-13T21:00:12-05:00\"^^xsd:dateTime .";
 
         // Instantiate the query engine.
-        final CachingSparqlStreamProcessor queryEngine = new CachingSparqlStreamProcessor();
+        final SparqlStreamProcessor queryEngine = new CachingSparqlStreamProcessor();
 
         // Define a time-to-live for the query. It will expire after this many seconds,
         // freeing up resources and ceasing to match statements.

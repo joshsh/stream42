@@ -1,7 +1,7 @@
 package net.fortytwo.stream.sparql.etc;
 
 import net.fortytwo.stream.Subscription;
-import net.fortytwo.stream.sparql.RDFStreamProcessor;
+import net.fortytwo.stream.sparql.SparqlStreamProcessor;
 import org.openrdf.query.BindingSet;
 
 import java.io.IOException;
@@ -84,7 +84,7 @@ public class SolutionSequenceModifier {
                 // this is REDUCED, which in SesameStream only allows the distinct set to grow to a specified size
                 // Currently, the set is simply cleared when it overflows
                 if (hasReduced) {
-                    if (distinctSet.size() >= RDFStreamProcessor.getReducedModifierCapacity()) {
+                    if (distinctSet.size() >= SparqlStreamProcessor.getReducedModifierCapacity()) {
                         distinctSet.clear();
                     }
                 }

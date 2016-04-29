@@ -1,6 +1,7 @@
 package net.fortytwo.stream;
 
 import net.fortytwo.stream.sparql.RDFStreamProcessor;
+import net.fortytwo.stream.sparql.SparqlStreamProcessor;
 import net.fortytwo.stream.sparql.etc.SparqlTestBase;
 import net.fortytwo.stream.sparql.impl.caching.CachingSparqlStreamProcessor;
 import net.fortytwo.stream.sparql.impl.shj.SHJSparqlStreamProcessor;
@@ -235,8 +236,8 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
 
     @Test
     public void testReduced() throws Exception {
-        long overflow = RDFStreamProcessor.getReducedModifierCapacity();
-        RDFStreamProcessor.setReducedModifierCapacity(2);
+        long overflow = SparqlStreamProcessor.getReducedModifierCapacity();
+        SparqlStreamProcessor.setReducedModifierCapacity(2);
         try {
             int raw = continuousQueryAnswers(
                     loadData("example.nq"), loadQuery("exponential-join-nodistinct.rq"), false).size();
@@ -251,7 +252,7 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
 
             assertTrue(reduced > distinct);
         } finally {
-            RDFStreamProcessor.setReducedModifierCapacity(overflow);
+            SparqlStreamProcessor.setReducedModifierCapacity(overflow);
         }
     }
 

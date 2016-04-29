@@ -45,6 +45,8 @@ import java.util.logging.Level;
  */
 public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<SparqlQuery, Q> {
 
+    private static long reducedModifierCapacity = 1000;
+
     private final FilterEvaluator filterEvaluator;
 
     private ExecutorService linkedDataService;
@@ -52,6 +54,26 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
     private final int httpThreadPoolSize = Runtime.getRuntime().availableProcessors() + 1;
 
     private LinkedDataCache linkedDataCache;
+
+    /**
+     * @return the number of distinct solutions which each query subscription can store before it begins recycling them
+     * For a SELECT DISTINCT query, the set of distinct solution grows without bound,
+     * but a duplicate answer will never appear in the output stream.
+     * However, for a SELECT REDUCED query, the set of distinct solutions is limited in size().
+     * This is much safer with respect to memory consumption,
+     * although duplicate solutions may eventually appear in the output stream.
+     */
+    public static long getReducedModifierCapacity() {
+        return reducedModifierCapacity;
+    }
+
+    public static void setReducedModifierCapacity(final long capacity) {
+        if (capacity < 1) {
+            throw new IllegalArgumentException("unreasonable REDUCED capacity value: " + capacity);
+        }
+
+        reducedModifierCapacity = capacity;
+    }
 
     protected SparqlStreamProcessor() {
         ValueFactory valueFactory = new ValueFactoryImpl();

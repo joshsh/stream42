@@ -1,7 +1,8 @@
 package net.fortytwo.stream.examples;
 
 import net.fortytwo.stream.Subscription;
-import net.fortytwo.stream.sparql.impl.caching.CachingSparqlStreamProcessor;
+import net.fortytwo.stream.sparql.SparqlStreamProcessor;
+import net.fortytwo.stream.sparql.impl.shj.SHJSparqlStreamProcessor;
 import org.openrdf.model.Statement;
 import org.openrdf.model.impl.StatementImpl;
 import org.openrdf.model.impl.URIImpl;
@@ -46,7 +47,7 @@ public class BasicExample {
                 "    tl:at \"2015-02-13T21:00:12-05:00\"^^xsd:dateTime .";
 
         // Instantiate the query engine.
-        CachingSparqlStreamProcessor queryEngine = new CachingSparqlStreamProcessor();
+        SparqlStreamProcessor streamProcessor = new SHJSparqlStreamProcessor();
 
         // Define a time-to-live for the query. It will expire after this many seconds,
         // freeing up resources and ceasing to match statements.
@@ -61,7 +62,7 @@ public class BasicExample {
         };
 
         // Submit the query to the query engine to obtain a subscription.
-        Subscription sub = queryEngine.addQuery(queryTtl, query, handler);
+        Subscription sub = streamProcessor.addQuery(queryTtl, query, handler);
 
         // Create subscriptions for additional queries at any time; queries match in parallel
 
@@ -69,13 +70,13 @@ public class BasicExample {
         // Results derived from this data will never expire.
         int staticTtl = 0;
 
-        // Add some static background knowledge.  Alternatively, let SesameStream discover this
+        // Add some static background knowledge.  Alternatively, let Stream42 discover this
         // information as Linked Data (see LinkedDataExample.java).
         Statement st = new StatementImpl(
                 new URIImpl("http://dbpedia.org/resource/The_Meaning_of_Liff"),
                 new URIImpl("http://dbpedia.org/ontology/author"),
                 new URIImpl("http://dbpedia.org/resource/Douglas_Adams"));
-        queryEngine.addInputs(staticTtl, st);
+        streamProcessor.addInputs(staticTtl, st);
 
         // Now define a finite time-to-live of 30 seconds.
         // This will be used for the short-lived data of gesture events.
@@ -83,7 +84,7 @@ public class BasicExample {
 
         RDFFormat format = RDFFormat.TURTLE;
         RDFParser parser = Rio.createParser(format);
-        parser.setRDFHandler(queryEngine.createRDFHandler(eventTtl));
+        parser.setRDFHandler(streamProcessor.createRDFHandler(eventTtl));
         // As new statements are added, computed query answers will be pushed to the BindingSetHandler.
         parser.parse(new ByteArrayInputStream(eventData.getBytes()), "");
 

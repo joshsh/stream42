@@ -25,8 +25,6 @@ public abstract class RDFStreamProcessor<C, Q> extends BasicStreamProcessor<Stri
 
     protected static final Logger logger = Logger.getLogger(RDFStreamProcessor.class.getName());
 
-    private static long reducedModifierCapacity = 1000;
-
     public enum Quantity {
         Queries, Inputs, Solutions,
     }
@@ -51,26 +49,6 @@ public abstract class RDFStreamProcessor<C, Q> extends BasicStreamProcessor<Stri
 
     public void shutDown() {
         active = false;
-    }
-
-    /**
-     * @return the number of distinct solutions which each query subscription can store before it begins recycling them
-     * For a SELECT DISTINCT query, the set of distinct solution grows without bound,
-     * but a duplicate answer will never appear in the output stream.
-     * However, for a SELECT REDUCED query, the set of distinct solutions is limited in size().
-     * This is much safer with respect to memory consumption,
-     * although duplicate solutions may eventually appear in the output stream.
-     */
-    public static long getReducedModifierCapacity() {
-        return reducedModifierCapacity;
-    }
-
-    public static void setReducedModifierCapacity(final long capacity) {
-        if (capacity < 1) {
-            throw new IllegalArgumentException("unreasonable REDUCED capacity value: " + capacity);
-        }
-
-        reducedModifierCapacity = capacity;
     }
 
     protected RDFStreamProcessor() {
