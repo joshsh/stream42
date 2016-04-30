@@ -12,7 +12,7 @@ import java.util.Collection;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class StatementCollector implements RDFHandler {
-    private Collection<Statement> coll;
+    private final Collection<Statement> coll;
 
     public StatementCollector(final Collection<Statement> coll) {
         this.coll = coll;

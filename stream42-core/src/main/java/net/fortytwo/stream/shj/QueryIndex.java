@@ -27,7 +27,7 @@ public class QueryIndex<K, V> implements Index<Query<K, V>> {
 
     private final Set<Query<K, V>> queries;
 
-    protected QueryIndex() {
+    private QueryIndex() {
         queryContext = null;
         queries = null;
     }

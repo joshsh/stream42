@@ -1,7 +1,5 @@
 package net.fortytwo.stream.shj;
 
-import net.fortytwo.stream.StreamProcessor;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;

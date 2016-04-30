@@ -37,8 +37,8 @@ public interface StreamProcessor<Q, I, S> {
      * Adds a new query subscription to this query engine
      *
      * @param ttl      the time-to-live of the generated subscription, in seconds.
-     *                 If ttl > 0, the query has a finite lifetime and will be automatically unregistered at the end
-     *                 of that lifetime.
+     *                 If ttl is greater than 0, the query has a finite lifetime and will be
+     *                 automatically unregistered at the end of that lifetime.
      *                 Note: the query engine may be configured to reject a ttl which is too high, including 0 (infinite).
      * @param query    the query to add
      * @param consumer a handler for future query solutions together with their expiration time
@@ -60,8 +60,8 @@ public interface StreamProcessor<Q, I, S> {
      * or trigger the production query solutions.
      *
      * @param ttl    the time-to-live of the inputs, in seconds.
-     *               If ttl > 0, any partial solutions which are computed in response to those inputs have a finite
-     *               lifetime, and will expire from the index at the end of that lifetime.
+     *               If ttl is greater than 0, any partial solutions which are computed in response to those inputs
+     *               have a finite lifetime, and will expire from the index at the end of that lifetime.
      * @param inputs the input data to add.  Inputs are added in array order
      * @return whether the addition of the inputs changed the state of the stream processor;
      * some inputs may pass through and have no effect, while others are used in query answering

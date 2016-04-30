@@ -38,12 +38,12 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
 
     private static final String[] INCOMPATIBLE_QUERIES = {"not-equal-filters"};
 
-    protected String ex = "http://example.org/";
-    protected String foaf = "http://xmlns.com/foaf/0.1/";
-    protected URI arthur = vf.createURI(ex + "arthur");
-    protected URI zaphod = vf.createURI(ex + "zaphod");
-    protected URI ford = vf.createURI(ex + "ford");
-    protected URI knows = vf.createURI(foaf + "knows");
+    private final String ex = "http://example.org/";
+    private final String foaf = "http://xmlns.com/foaf/0.1/";
+    private URI arthur = vf.createURI(ex + "arthur");
+    private URI zaphod = vf.createURI(ex + "zaphod");
+    private URI ford = vf.createURI(ex + "ford");
+    private URI knows = vf.createURI(foaf + "knows");
 
     @Before
     public void setUp() throws Exception {

@@ -124,6 +124,7 @@ public class SolutionIndex<T> {
      * @param matchedSolution the initial solution produced by matching the tuple pattern against the tuple
      * @param bindings        a set of bindings
      * @param solutions       a stack of solutions which will be cleared, and to which solutions will be added
+     * @param now             the current clock time
      */
     public void joinSolutions(final Solution<T> matchedSolution,
                               final Bindings<T> bindings,

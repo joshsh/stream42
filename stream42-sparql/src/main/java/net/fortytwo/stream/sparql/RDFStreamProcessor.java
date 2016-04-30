@@ -47,7 +47,7 @@ public abstract class RDFStreamProcessor<C, Q> extends BasicStreamProcessor<Stri
         return active;
     }
 
-    public void shutDown() {
+    protected void shutDown() {
         active = false;
     }
 
@@ -119,7 +119,7 @@ public abstract class RDFStreamProcessor<C, Q> extends BasicStreamProcessor<Stri
     protected Subscription addQueryNative(final int ttl,
                                           final C sparqlQuery,
                                           final BiConsumer<BindingSet, Long> consumer)
-            throws IncompatibleQueryException, IOException {
+            throws IOException {
 
         incrementQueries();
 

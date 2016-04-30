@@ -13,8 +13,9 @@ import java.io.IOException;
 public abstract class BasicStreamProcessor<R, C, Q, I, S> implements StreamProcessor<R, I, S> {
 
     /**
-     * Frees up the resources occupied by this subscription and prevent it from matching future inputs
+     * Frees up the resources occupied by the provided subscription and prevents it from matching future inputs
      *
+     * @param subscription a query subscription to deactivate and remove
      * @throws java.io.IOException if there is a problem communicating with this query engine
      *                             (for example, if there are network operations involved)
      */
@@ -25,7 +26,7 @@ public abstract class BasicStreamProcessor<R, C, Q, I, S> implements StreamProce
      *
      * @param subscription the subscription to renew
      * @param ttl          a new time-to-live for the subscription, in seconds
-     * @return whether the subscription is renewed.
+     * @return whether the subscription is successfully renewed.
      * Renewal may or may not be possible, depending on the state of the subscription and the query engine.
      * @throws IOException if there is a problem communicating with this query engine
      *                     (for example, if there are network operations involved)

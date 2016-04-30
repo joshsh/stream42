@@ -276,10 +276,6 @@ public class SparqlQuery {
         } else if (filterChild instanceof StatementPattern) {
             findPatterns((StatementPattern) filterChild, patterns);
         } else {
-            if (filterChild instanceof Filter) {
-                Filter childFilter = (Filter) filterChild;
-            }
-
             throw new StreamProcessor.IncompatibleQueryException(
                     "expected join or statement pattern beneath filter; found " + filterChild);
         }

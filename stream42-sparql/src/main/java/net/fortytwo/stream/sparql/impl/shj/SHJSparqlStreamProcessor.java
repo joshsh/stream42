@@ -29,10 +29,10 @@ import java.util.logging.Level;
  */
 public class SHJSparqlStreamProcessor extends SparqlStreamProcessor<Query<String, Value>> {
 
-    protected final ExpirationManager<Solution<Value>> solutionExpirationManager;
-    protected final ExpirationManager<Query<String, Value>> queryExpirationManager;
-    protected final QueryContext<String, Value> context;
-    protected final QueryIndex<String, Value> queryIndex;
+    private final ExpirationManager<Solution<Value>> solutionExpirationManager;
+    private final ExpirationManager<Query<String, Value>> queryExpirationManager;
+    private final QueryContext<String, Value> context;
+    private final QueryIndex<String, Value> queryIndex;
 
     public SHJSparqlStreamProcessor() {
         super();

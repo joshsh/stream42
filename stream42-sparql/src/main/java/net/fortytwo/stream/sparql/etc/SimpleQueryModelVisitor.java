@@ -404,6 +404,6 @@ public class SimpleQueryModelVisitor implements QueryModelVisitor {
         visited.add(queryModelNode);
     }
 
-    public static class SimpleVisitorException extends Exception {
+    private static class SimpleVisitorException extends Exception {
     }
 }

@@ -38,18 +38,18 @@ import java.util.logging.Logger;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SparqlTestBase {
-    protected static final String BASE_URI = "http://example.org/base/";
+    private static final String BASE_URI = "http://example.org/base/";
 
     protected static final Logger logger = Logger.getLogger(SparqlTestBase.class.getName());
 
-    protected QueryParser queryParser = new SPARQLParser();
+    private final QueryParser queryParser = new SPARQLParser();
     protected Sail sail;
     protected SparqlStreamProcessor queryEngine;
-    protected ValueFactory vf = new ValueFactoryImpl();
+    protected final ValueFactory vf = new ValueFactoryImpl();
 
     protected final int TUPLE_TTL = 0, QUERY_TTL = 0;
 
-    protected BiConsumer<BindingSet, Long> simpleConsumer = new BiConsumer<BindingSet, Long>() {
+    protected final BiConsumer<BindingSet, Long> simpleConsumer = new BiConsumer<BindingSet, Long>() {
         @Override
         public void accept(final BindingSet result, final Long expirationTime) {
             System.out.println("result: " + result + ", expires at " + expirationTime);

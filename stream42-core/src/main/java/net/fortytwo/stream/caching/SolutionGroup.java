@@ -55,6 +55,8 @@ public class SolutionGroup<T> {
      *            The solution group is updated with respect to this time stamp in that an expired solution will
      *            be rejected and expired solutions still present in the group and encountered in the process of
      *            insertion will be removed.
+     * @return whether the provided solution has been inserted.
+     * If an existing solution makes it redundant, it may not be.
      */
     public boolean add(final Solution<T> sol,
                        final long now) {

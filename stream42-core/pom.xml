@@ -25,9 +25,6 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>src/main/java</sourceDirectory>
-        <testSourceDirectory>${srcdir}</testSourceDirectory>
-        <directory>target</directory>
         <finalName>${project.artifactId}-${project.version}</finalName>
         <resources>
             <resource>

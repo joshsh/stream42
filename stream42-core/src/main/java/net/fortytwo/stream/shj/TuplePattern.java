@@ -4,7 +4,7 @@ import net.fortytwo.stream.model.VariableOrConstant;
 
 /**
  * A more general form of a SPARQL triple pattern
- * <p/>
+ *
  * See https://www.w3.org/TR/sparql11-query/#defn_TriplePattern
  *
  * @author Joshua Shinavier (http://fortytwo.net)

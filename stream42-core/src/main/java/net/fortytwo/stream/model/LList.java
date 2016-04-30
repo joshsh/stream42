@@ -6,7 +6,7 @@ package net.fortytwo.stream.model;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class LList<T> {
-    public static LList NIL = new LList();
+    public static final LList NIL = new LList();
 
     private T value;
 

@@ -20,7 +20,7 @@ public class SolutionIndex<V> implements Index<Solution<V>> {
     private final QueryContext<?, V> queryContext;
 
     // note: must be thread-safe, as we read and write concurrently, even though we do not iterate
-    private Map<Solution<V>, Solution<V>> allSolutions = new ConcurrentHashMap<>();
+    private final Map<Solution<V>, Solution<V>> allSolutions = new ConcurrentHashMap<>();
 
     // note: must be thread-safe, as we read and write concurrently, even though we do not iterate
     private final Map<V, Set<Solution<V>>>[] solutionsByBinding;
@@ -28,7 +28,7 @@ public class SolutionIndex<V> implements Index<Solution<V>> {
     // note: must be thread-safe because we may iterate over and add subscribers concurrently
     private final Set<Consumer<Solution<V>>> consumers = QueryContext.newConcurrentSet();
 
-    private Index<Consumer<Solution<V>>> consumerIndex = new Index<Consumer<Solution<V>>>() {
+    private final Index<Consumer<Solution<V>>> consumerIndex = new Index<Consumer<Solution<V>>>() {
         @Override
         public void add(Consumer<Solution<V>> toAdd) {
             consumers.add(toAdd);

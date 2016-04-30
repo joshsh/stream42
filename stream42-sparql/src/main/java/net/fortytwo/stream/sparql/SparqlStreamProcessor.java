@@ -142,9 +142,8 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
      * to query results and/or partial solutions, and may trigger further HTTP requests.
      *
      * @param cache a collection of caching metadata about Linked Data already retrieved
-     * @throws org.openrdf.sail.SailException if a cache-level query exception occurs
      */
-    public void setLinkedDataCache(final LinkedDataCache cache) throws SailException {
+    public void setLinkedDataCache(final LinkedDataCache cache) {
         this.linkedDataCache = cache;
         this.linkedDataCache.setAutoCommit(true);
 

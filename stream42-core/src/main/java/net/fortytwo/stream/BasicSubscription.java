@@ -23,7 +23,7 @@ public class BasicSubscription<C, Q, S> implements Subscription {
 
     private final String id;
 
-    public synchronized static String getNextId() {
+    private synchronized static String getNextId() {
         return Integer.valueOf(nextId++).toString();
     }
 

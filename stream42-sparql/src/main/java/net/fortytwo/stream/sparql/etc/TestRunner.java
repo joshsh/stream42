@@ -58,7 +58,6 @@ public class TestRunner {
             throws IOException, MalformedQueryException, StreamProcessor.IncompatibleQueryException, RDFHandlerException, StreamProcessor.InvalidQueryException {
 
         CachingSparqlStreamProcessor engine = new CachingSparqlStreamProcessor();
-        QueryParser queryParser = new SPARQLParser();
         String baseUri = "http://example.org/base-uri/";
 
         BiConsumer<BindingSet, Long> solutionConsumer = new BiConsumer<BindingSet, Long>() {
