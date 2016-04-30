@@ -1,5 +1,7 @@
 package net.fortytwo.stream.shj;
 
+import net.fortytwo.stream.StreamProcessor;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -87,7 +89,7 @@ public class JoinHelper<K, V> implements Consumer<Solution<V>> {
             mapping.put(keys[i], values[i]);
         }
 
-        hashJoin(solutions, remaining, newBoundKey, tmpMaps, mapping, 0, false);
+        hashJoin(solutions, remaining, newBoundKey, tmpMaps, mapping, 0, false, solution.getExpirationTime());
     }
 
     private void hashJoin(Collection<Solution<V>> solutions,
@@ -96,7 +98,8 @@ public class JoinHelper<K, V> implements Consumer<Solution<V>> {
                           List<Map<K, V>> maps,
                           Map<K, V> curMapping,
                           int depth,
-                          boolean checkCompatible) {
+                          boolean checkCompatible,
+                          long expirationTime) {
         remaining.remove(this);
 
         Map<K, V> nextMapping;
@@ -114,15 +117,22 @@ public class JoinHelper<K, V> implements Consumer<Solution<V>> {
         }
 
         for (Solution<V> solution : solutions) {
-            trySolution(solution, remaining, newBoundKey, maps, curMapping, nextMapping, depth + 1, checkCompatible);
+            trySolution(solution, remaining, newBoundKey, maps, curMapping, nextMapping,
+                    depth + 1, checkCompatible, expirationTime);
         }
 
         remaining.add(this);
     }
 
+    private long minExpirationTime(long time1, long time2) {
+        // note: this relies on StreamProcessor.NEVER_EXPIRE == Long.MAX_VALUE, or any high value
+        return Math.min(time1, time2);
+    }
+
     private void trySolution(Solution<V> solution, Set<JoinHelper<K, V>> remaining, K newBoundKey,
                              List<Map<K, V>> maps, Map<K, V> curMapping, Map<K, V> nextMapping,
-                             int depth, boolean checkCompatible) {
+                             int depth, boolean checkCompatible, long expirationTime) {
+
         V[] values = solution.getValues();
 
         // first iterate over the solution's key/value pairs to filter out incompatible solutions
@@ -151,7 +161,8 @@ public class JoinHelper<K, V> implements Consumer<Solution<V>> {
             // create a copy of the mapping, as the temporary one may continue to change
             Map<K, V> copy = new HashMap<>(nextMapping);
             // this is a complete solution; write it to the query's consumer
-            solutionConsumer.accept(copy, solution.getExpirationTime());
+            long newExpirationTime = minExpirationTime(expirationTime, solution.getExpirationTime());
+            solutionConsumer.accept(copy, newExpirationTime);
         } else {
             // this is an incomplete solution; we must join the partial solution with others
             JoinHelper<K, V> bestHelper = null;
@@ -189,7 +200,8 @@ public class JoinHelper<K, V> implements Consumer<Solution<V>> {
 
             // we found at least one join set; we pick this one and ignore the others
             if (null != bestHelper) {
-                bestHelper.hashJoin(bestSet, remaining, bestKey, maps, nextMapping, depth, true);
+                long newExpirationTime = minExpirationTime(expirationTime, solution.getExpirationTime());
+                bestHelper.hashJoin(bestSet, remaining, bestKey, maps, nextMapping, depth, true, newExpirationTime);
             }
         }
     }

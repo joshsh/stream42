@@ -97,6 +97,8 @@ public class QueryIndex<K, V> implements Index<Query<K, V>> {
             }
 
             query.setAllHelpers(wrappers);
+            queryContext.getQueryExpirationManager().notifyFinishedAdding();
+
             success = true;
         } finally {
             if (!success) {
@@ -155,6 +157,11 @@ public class QueryIndex<K, V> implements Index<Query<K, V>> {
             V[] values = (V[]) new Object[tuple.length];
 
             boolean ret = addTuple(tuple, values, 0, 0, expirationTime);
+
+            if (ret) {
+                queryContext.getSolutionExpirationManager().notifyFinishedAdding();
+            }
+
             success = true;
             return ret;
         } finally {

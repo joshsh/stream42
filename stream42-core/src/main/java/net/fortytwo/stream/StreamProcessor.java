@@ -23,7 +23,7 @@ public interface StreamProcessor<Q, I, S> {
     /**
      * A special value representing an infinitely remote expiration time
      */
-    public static final long NEVER_EXPIRE = 0L;
+    public static final long NEVER_EXPIRE = Long.MAX_VALUE;
 
     /**
      * Removes all triple patterns along with their associated partial solutions, queries, and subscriptions
