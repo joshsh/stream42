@@ -1,22 +1,22 @@
 package net.fortytwo.stream.sparql.etc;
 
 import org.openrdf.model.BNode;
+import org.openrdf.model.IRI;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.URIImpl;
 import org.openrdf.model.impl.ValueFactoryBase;
+import org.openrdf.model.impl.ValueFactoryImpl;
 
 /**
- * A ValueFactory which will accept bad URIs (e.g. in input files), replacing them with valid URIs
+ * A ValueFactory which will accept bad IRIs (e.g. in input files), replacing them with valid IRIs
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class ErrorTolerantValueFactory extends ValueFactoryBase {
-    private static final URI GOOD_URI = new URIImpl("http://example.org/substitute-for-bad-uri");
+    private static final IRI GOOD_IRI = new ValueFactoryImpl().createIRI("http://example.org/substitute-for-bad-iri");
 
     private final ValueFactory base;
 
@@ -25,20 +25,20 @@ public class ErrorTolerantValueFactory extends ValueFactoryBase {
     }
 
     @Override
-    public URI createURI(String s) {
+    public IRI createIRI(String s) {
         try {
-            return base.createURI(s);
+            return base.createIRI(s);
         } catch (IllegalArgumentException e) {
-            return GOOD_URI;
+            return GOOD_IRI;
         }
     }
 
     @Override
-    public URI createURI(String s, String s1) {
+    public IRI createIRI(String s, String s1) {
         try {
-            return base.createURI(s, s1);
+            return base.createIRI(s, s1);
         } catch (IllegalArgumentException e) {
-            return GOOD_URI;
+            return GOOD_IRI;
         }
     }
 
@@ -58,17 +58,17 @@ public class ErrorTolerantValueFactory extends ValueFactoryBase {
     }
 
     @Override
-    public Literal createLiteral(String s, URI uri) {
-        return base.createLiteral(s, uri);
+    public Literal createLiteral(String s, IRI iri) {
+        return base.createLiteral(s, iri);
     }
 
     @Override
-    public Statement createStatement(Resource resource, URI uri, Value value) {
-        return base.createStatement(resource, uri, value);
+    public Statement createStatement(Resource resource, IRI iri, Value value) {
+        return base.createStatement(resource, iri, value);
     }
 
     @Override
-    public Statement createStatement(Resource resource, URI uri, Value value, Resource resource1) {
-        return base.createStatement(resource, uri, value, resource1);
+    public Statement createStatement(Resource resource, IRI iri, Value value, Resource resource1) {
+        return base.createStatement(resource, iri, value, resource1);
     }
 }

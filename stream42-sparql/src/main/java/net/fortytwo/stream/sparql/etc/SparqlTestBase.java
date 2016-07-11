@@ -1,9 +1,9 @@
 package net.fortytwo.stream.sparql.etc;
 
-import net.fortytwo.stream.sparql.SparqlStreamProcessor;
-import net.fortytwo.stream.sparql.RDFStreamProcessor;
 import info.aduna.io.IOUtil;
 import info.aduna.iteration.CloseableIteration;
+import net.fortytwo.stream.sparql.RDFStreamProcessor;
+import net.fortytwo.stream.sparql.SparqlStreamProcessor;
 import org.openrdf.model.Statement;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
@@ -17,6 +17,7 @@ import org.openrdf.query.parser.QueryParser;
 import org.openrdf.query.parser.sparql.SPARQLParser;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFParser;
+import org.openrdf.rio.RDFParserRegistry;
 import org.openrdf.rio.Rio;
 import org.openrdf.sail.Sail;
 import org.openrdf.sail.SailConnection;
@@ -28,9 +29,9 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.logging.Logger;
 
 /**
  * A base class for unit tests, included here for ease of use in downstream projects.
@@ -38,9 +39,7 @@ import java.util.logging.Logger;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SparqlTestBase {
-    private static final String BASE_URI = "http://example.org/base/";
-
-    protected static final Logger logger = Logger.getLogger(SparqlTestBase.class.getName());
+    private static final String BASE_IRI = "http://example.org/base/";
 
     private final QueryParser queryParser = new SPARQLParser();
     protected Sail sail;
@@ -49,31 +48,27 @@ public class SparqlTestBase {
 
     protected final int TUPLE_TTL = 0, QUERY_TTL = 0;
 
-    protected final BiConsumer<BindingSet, Long> simpleConsumer = new BiConsumer<BindingSet, Long>() {
-        @Override
-        public void accept(final BindingSet result, final Long expirationTime) {
-            System.out.println("result: " + result + ", expires at " + expirationTime);
-        }
-    };
+    protected final BiConsumer<BindingSet, Long> simpleConsumer
+            = (result, expirationTime) -> System.out.println("result: " + result + ", expires at " + expirationTime);
 
     protected TupleExpr loadQuery(final String fileName) throws Exception {
         InputStream in = RDFStreamProcessor.class.getResourceAsStream(fileName);
         String query = IOUtil.readString(in);
         in.close();
 
-        ParsedQuery pq = queryParser.parseQuery(query, BASE_URI);
+        ParsedQuery pq = queryParser.parseQuery(query, BASE_IRI);
 
         return pq.getTupleExpr();
     }
 
     protected List<Statement> loadData(final String fileName) throws Exception {
-        RDFFormat format = RDFFormat.forFileName(fileName);
+        Optional<RDFFormat> format = RDFParserRegistry.getInstance().getFileFormatForFileName(fileName);
 
-        if (null == format) {
+        if (!format.isPresent()) {
             throw new IllegalStateException("unsupported file extension");
         }
 
-        RDFParser p = Rio.createParser(format);
+        RDFParser p = Rio.createParser(format.get());
 
         p.setDatatypeHandling(RDFParser.DatatypeHandling.IGNORE);
 
@@ -83,7 +78,7 @@ public class SparqlTestBase {
         InputStream in = fileName.startsWith("/")
                 ? new FileInputStream(new File(fileName))
                 : RDFStreamProcessor.class.getResourceAsStream(fileName);
-        p.parse(in, BASE_URI);
+        p.parse(in, BASE_IRI);
         in.close();
 
         return c;
@@ -106,14 +101,11 @@ public class SparqlTestBase {
                     sc.addStatement(s.getSubject(), s.getPredicate(), s.getObject(), s.getContext());
                 }
 
-                CloseableIteration<? extends BindingSet, QueryEvaluationException> iter
-                        = sc.evaluate(query, new DatasetImpl(), new EmptyBindingSet(), false);
-                try {
+                try (CloseableIteration<? extends BindingSet, QueryEvaluationException> iter
+                             = sc.evaluate(query, new DatasetImpl(), new EmptyBindingSet(), false)) {
                     while (iter.hasNext()) {
                         results.add(iter.next());
                     }
-                } finally {
-                    iter.close();
                 }
             } finally {
                 sc.rollback();
@@ -166,14 +158,11 @@ public class SparqlTestBase {
 
         queryEngine.clear();
 
-        BiConsumer<BindingSet, Long> solutionConsumer = new BiConsumer<BindingSet, Long>() {
-            @Override
-            public void accept(final BindingSet result, final Long expirationTime) {
-                if (debug) {
-                    System.out.println("result: " + result + ", expires at " + expirationTime);
-                }
-                answers.add(result);
+        BiConsumer<BindingSet, Long> solutionConsumer = (result, expirationTime) -> {
+            if (debug) {
+                System.out.println("result: " + result + ", expires at " + expirationTime);
             }
+            answers.add(result);
         };
 
         queryEngine.addQuery(QUERY_TTL, query, solutionConsumer);
@@ -181,17 +170,6 @@ public class SparqlTestBase {
         for (Statement s : data) {
             queryEngine.addInputs(TUPLE_TTL, s);
         }
-
-        /*
-        if (debug) {
-            Set<BindingSet> distinct = new HashSet<BindingSet>();
-            distinct.addAll(answers);
-
-            System.out.println("" + answers.size() + " solutions ("
-                    + distinct.size() + " distinct, " + countPartialSolutions()
-                    + " partial) from " + data.size() + " statements");
-        }
-        */
 
         return answers;
     }

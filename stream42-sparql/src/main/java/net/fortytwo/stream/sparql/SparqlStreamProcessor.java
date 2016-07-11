@@ -5,14 +5,9 @@ import net.fortytwo.stream.Subscription;
 import net.fortytwo.stream.model.LList;
 import net.fortytwo.stream.model.VariableOrConstant;
 import net.fortytwo.stream.sparql.etc.FilterEvaluator;
-import net.fortytwo.flow.NullSink;
-import net.fortytwo.flow.Sink;
-import net.fortytwo.flow.rdf.RDFSink;
 import net.fortytwo.linkeddata.LinkedDataCache;
-import net.fortytwo.ripple.RippleException;
-import org.openrdf.model.Namespace;
+import org.openrdf.model.IRI;
 import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
@@ -28,7 +23,6 @@ import org.openrdf.query.parser.QueryParserUtil;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.sail.SailConnection;
-import org.openrdf.sail.SailException;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -97,7 +91,7 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
     protected boolean addTuple(Value[] tuple, int ttl, long now) {
         boolean changed = addTupleInternal(tuple, ttl, now);
 
-        // cue the Linked Data cache to dereference the subject and object URIs of the statement,
+        // cue the Linked Data cache to dereference the subject and object IRIs of the statement,
         // but only if at least one pattern in the index has matched the tuple
         if (changed && null != linkedDataCache) {
             triggerLinkedDataCache(tuple);
@@ -137,7 +131,7 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
     /**
      * Adds a Linked Data fetching and caching layer to this query engine.
      * Once added, the Linked Data cache will listen for new triple patterns indexed by this query engine,
-     * and issue corresponding HTTP requests for additional information about URIs in those patterns.
+     * and issue corresponding HTTP requests for additional information about IRIs in those patterns.
      * Any RDF statements from retrieved documents are passed into the query engine, where they may contribute
      * to query results and/or partial solutions, and may trigger further HTTP requests.
      *
@@ -152,7 +146,8 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
         final int staticTtl = 0;
 
         LinkedDataCache.DataStore store = new LinkedDataCache.DataStore() {
-            public RDFSink createInputSink(final SailConnection sc) {
+            @Override
+            public Consumer<Statement> createConsumer(SailConnection sc) {
                 return createRDFSink(staticTtl);
             }
         };
@@ -185,8 +180,8 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
 
     @Override
     protected BasicSubscription<SparqlQuery, Q, BindingSet> createSubscription(final int ttl,
-                                                                    final SparqlQuery sparqlQuery,
-                                                                    final BiConsumer<BindingSet, Long> consumer) {
+                                                                               final SparqlQuery sparqlQuery,
+                                                                               final BiConsumer<BindingSet, Long> consumer) {
         long expirationTime = toExpirationTime(ttl, getNow());
 
         List<VariableOrConstant<String, Value>[]> patterns = new LinkedList<>();
@@ -221,14 +216,14 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
     protected SparqlQuery parseQuery(String queryStr) throws InvalidQueryException, IncompatibleQueryException {
 
         // TODO
-        String baseURI = "http://example.org/baseURI";
+        String baseIRI = "http://example.org/baseIRI";
 
         ParsedQuery parsedQuery;
         try {
             parsedQuery = QueryParserUtil.parseQuery(
                     QueryLanguage.SPARQL,
                     queryStr,
-                    baseURI);
+                    baseIRI);
         } catch (MalformedQueryException e) {
             throw new InvalidQueryException(e);
         }
@@ -309,14 +304,14 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
     private void triggerLinkedDataCache(final VariableOrConstant<String, Value>[] pattern) {
         if (pattern.length >= 1) {
             Value subject = pattern[0].getConstant();
-            if (null != subject && subject instanceof URI) {
-                indexLinkedDataUri((URI) subject);
+            if (null != subject && subject instanceof IRI) {
+                indexLinkedDataIri((IRI) subject);
             }
 
             if (pattern.length >= 3) {
                 Value object = pattern[2].getConstant();
-                if (null != object && object instanceof URI) {
-                    indexLinkedDataUri((URI) object);
+                if (null != object && object instanceof IRI) {
+                    indexLinkedDataIri((IRI) object);
                 }
             }
         }
@@ -327,79 +322,51 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
             Value subject = tuple[0];
             Value object = tuple[2];
 
-            if (subject instanceof URI && object instanceof URI) {
+            if (subject instanceof IRI && object instanceof IRI) {
                 boolean subjectExists, objectExists;
                 try {
-                    subjectExists = null != linkedDataCache.peek((URI) subject, linkedDataCache.getSailConnection());
-                    objectExists = null != linkedDataCache.peek((URI) object, linkedDataCache.getSailConnection());
-                } catch (RippleException e) {
-                    logger.log(Level.SEVERE, "Ripple exception while dereferencing (" + subject + "," + object + ")");
+                    subjectExists = null != linkedDataCache.peek((IRI) subject, linkedDataCache.getSailConnection());
+                    objectExists = null != linkedDataCache.peek((IRI) object, linkedDataCache.getSailConnection());
+                } catch (IOException e) {
+                    logger.log(Level.WARNING, "failed to dereference (" + subject + "," + object + "): "
+                            + e.getMessage());
                     return;
                 }
 
                 if (subjectExists && !objectExists) {
-                    indexLinkedDataUri((URI) object);
+                    indexLinkedDataIri((IRI) object);
                 } else if (objectExists && !subjectExists) {
-                    indexLinkedDataUri((URI) subject);
+                    indexLinkedDataIri((IRI) subject);
                 }
             }
         }
     }
 
-    // note: as the indexing of Linked Data URIs may trigger the fetching and rdfization of data sources,
+    // note: as the indexing of Linked Data IRIs may trigger the fetching and rdfization of data sources,
     // and as this occurs a pooled thread distinct from calling thread, query answers may be produced in that thread.
-    private void indexLinkedDataUri(final URI uri) {
-        if (isHttpUri(uri)) {
-            linkedDataService.execute(new Runnable() {
-                public void run() {
-                    try {
-                        linkedDataCache.retrieve(uri, linkedDataCache.getSailConnection());
-                    } catch (RippleException e) {
-                        logger.log(Level.SEVERE, "Ripple exception while dereferencing URI " + uri, e);
-                    }
+    private void indexLinkedDataIri(final IRI iri) {
+        if (isHttpIri(iri)) {
+            linkedDataService.execute(() -> {
+                try {
+                    linkedDataCache.retrieve(iri, linkedDataCache.getSailConnection());
+                } catch (IOException e) {
+                    logger.log(Level.WARNING, "failed to retrieve IRI", e);
                 }
             });
         }
     }
 
-    // pre-filter URIs so as to avoid needlessly creating executor tasks
-    private boolean isHttpUri(final URI uri) {
-        String s = uri.stringValue();
+    // pre-filter IRIs so as to avoid needlessly creating executor tasks
+    private boolean isHttpIri(final IRI iri) {
+        String s = iri.stringValue();
         return s.startsWith("http://") || s.startsWith("https://");
     }
 
     private void clearLinkedDataCache() {
-        try {
-            linkedDataCache.clear();
-        } catch (RippleException e) {
-            logger.log(Level.SEVERE, "failed to clear Linked Data cache when adding a query", e);
-        }
+        linkedDataCache.clear();
     }
 
-    private RDFSink createRDFSink(final int ttl) {
-        return new RDFSink() {
-            @Override
-            public Sink<Statement> statementSink() {
-                return new Sink<Statement>() {
-                    public void put(final Statement s) throws RippleException {
-                        try {
-                            addInputs(ttl, s);
-                        } catch (Throwable t) {
-                            throw new RippleException(t);
-                        }
-                    }
-                };
-            }
-
-            @Override
-            public Sink<Namespace> namespaceSink() {
-                return new NullSink<>();
-            }
-
-            @Override
-            public Sink<String> commentSink() {
-                return new NullSink<>();
-            }
-        };
+    private Consumer<Statement> createRDFSink(final int ttl) {
+        return statement -> addInputs(ttl, statement);
     }
 }

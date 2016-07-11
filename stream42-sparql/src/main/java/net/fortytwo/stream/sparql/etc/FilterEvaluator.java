@@ -2,9 +2,9 @@ package net.fortytwo.stream.sparql.etc;
 
 import info.aduna.iteration.CloseableIteration;
 import net.fortytwo.sesametools.EmptyCloseableIteration;
+import org.openrdf.model.IRI;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.query.BindingSet;
@@ -24,7 +24,7 @@ public class FilterEvaluator {
     public FilterEvaluator(ValueFactory valueFactory) {
         this.valueFactory = valueFactory;
 
-        eval = new EvaluationStrategyImpl(new EmptyTripleSource());
+        eval = new EvaluationStrategyImpl(new EmptyTripleSource(), null, null);
     }
 
     public boolean applyFilter(final Filter f,
@@ -35,7 +35,7 @@ public class FilterEvaluator {
     // a trivial TripleSource to satisfy EvaluationStrategyImpl
     private class EmptyTripleSource implements TripleSource {
         public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
-                Resource resource, URI uri, Value value, Resource... resources) throws QueryEvaluationException {
+                Resource resource, IRI iri, Value value, Resource... resources) throws QueryEvaluationException {
 
             return new EmptyCloseableIteration<>();
         }

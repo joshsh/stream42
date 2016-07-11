@@ -70,7 +70,7 @@ public class LinkedDataExample {
 
         // Create a Linked Data client.  The Sesame triple store will be used for
         // managing caching metadata, while the retrieved Linked Data will be fed into the continuous
-        // query engine, which will trigger the dereferencing of URIs in response to join operations.
+        // query engine, which will trigger the dereferencing of IRIs in response to join operations.
         MemoryStore sail = new MemoryStore();
         sail.initialize();
         LinkedDataCache cache = LinkedDataCache.createDefault(sail);
