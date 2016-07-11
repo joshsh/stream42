@@ -17,7 +17,7 @@ import static org.junit.Assert.fail;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class QueryIndexTest {
-    private static int QUERY_TTL = 0;
+    private static final int QUERY_TTL = 0;
     private long now;
 
     private Query.QueryVariables vars;
@@ -298,17 +298,14 @@ public class QueryIndexTest {
         }
 
         final Map<Integer, Integer> actualCount = new HashMap<>();
-        BiConsumer<String, Bindings<T>> handler = new BiConsumer<String, Bindings<T>>() {
-            @Override
-            public void accept(String id, Bindings<T> bindings) {
-                int hash = bindings.getHash();
-                all.put(hash, bindings);
-                Integer c = actualCount.get(hash);
-                if (null == c) {
-                    c = 0;
-                }
-                actualCount.put(hash, c + 1);
+        BiConsumer<String, Bindings<T>> handler = (id, bindings) -> {
+            int hash = bindings.getHash();
+            all.put(hash, bindings);
+            Integer c = actualCount.get(hash);
+            if (null == c) {
+                c = 0;
             }
+            actualCount.put(hash, c + 1);
         };
 
         QueryIndex<T, String> index = (QueryIndex<T, String>) queryIndex;

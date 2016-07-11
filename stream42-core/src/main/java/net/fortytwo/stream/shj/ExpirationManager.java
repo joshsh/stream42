@@ -146,40 +146,37 @@ public abstract class ExpirationManager<T extends Expirable> implements Index<T>
 
         stopped = false;
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    logger.info(ExpirationManager.class.getSimpleName() + " thread started");
+        new Thread(() -> {
+            try {
+                logger.info(ExpirationManager.class.getSimpleName() + " thread started");
 
-                    // repeatedly evict all expired data, pausing appropriately
-                    while (!stopped) {
-                        long firstExpiringTimestamp = heap.isEmpty() ? 0 : heap.peek().getExpirationTime();
+                // repeatedly evict all expired data, pausing appropriately
+                while (!stopped) {
+                    long firstExpiringTimestamp = heap.isEmpty() ? 0 : heap.peek().getExpirationTime();
 
-                        try {
-                            synchronized (waitLock) {
-                                if (0 == firstExpiringTimestamp) {
-                                    // wait indefinitely, or until notified
-                                    waitLock.wait();
-                                } else {
-                                    // wait until the currently known first expiring time stamp, or until notified
-                                    long now = getNow();
-                                    if (now < firstExpiringTimestamp) {
-                                        waitLock.wait(firstExpiringTimestamp - now);
-                                    }
+                    try {
+                        synchronized (waitLock) {
+                            if (0 == firstExpiringTimestamp) {
+                                // wait indefinitely, or until notified
+                                waitLock.wait();
+                            } else {
+                                // wait until the currently known first expiring time stamp, or until notified
+                                long now = getNow();
+                                if (now < firstExpiringTimestamp) {
+                                    waitLock.wait(firstExpiringTimestamp - now);
                                 }
                             }
-                        } catch (InterruptedException e) {
-                            logger.warning(ExpirationManager.class.getSimpleName()
-                                    + " thread interrupted while waiting");
                         }
-
-                        evictExpired();
+                    } catch (InterruptedException e) {
+                        logger.warning(ExpirationManager.class.getSimpleName()
+                                + " thread interrupted while waiting");
                     }
-                    logger.info(ExpirationManager.class.getSimpleName() + " thread stopped");
-                } catch (Exception e) {
-                    logger.log(Level.SEVERE, ExpirationManager.class.getSimpleName() + " thread died with error", e);
+
+                    evictExpired();
                 }
+                logger.info(ExpirationManager.class.getSimpleName() + " thread stopped");
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, ExpirationManager.class.getSimpleName() + " thread died with error", e);
             }
         }).start();
     }

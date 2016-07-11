@@ -27,11 +27,8 @@ public interface StreamProcessor<Q, I, S> {
 
     /**
      * Removes all triple patterns along with their associated partial solutions, queries, and subscriptions
-     *
-     * @throws IOException if there is a problem communicating with this query engine
-     *                     (for example, if there are network operations involved)
      */
-    void clear() throws IOException;
+    void clear();
 
     /**
      * Adds a new query subscription to this query engine
@@ -65,10 +62,8 @@ public interface StreamProcessor<Q, I, S> {
      * @param inputs the input data to add.  Inputs are added in array order
      * @return whether the addition of the inputs changed the state of the stream processor;
      * some inputs may pass through and have no effect, while others are used in query answering
-     * @throws IOException if there is a problem communicating with this query engine
-     *                     (for example, if there are network operations involved)
      */
-    boolean addInputs(int ttl, I... inputs) throws IOException;
+    boolean addInputs(int ttl, I... inputs);
 
     /**
      * Sets the clock used by this query engine to determine the expiration of queries and solutions,

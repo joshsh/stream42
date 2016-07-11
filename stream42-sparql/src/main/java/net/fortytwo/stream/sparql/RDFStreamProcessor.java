@@ -58,12 +58,7 @@ public abstract class RDFStreamProcessor<C, Q> extends BasicStreamProcessor<Stri
         counters.put(Quantity.Inputs, countStatements);
         counters.put(Quantity.Solutions, countSolutions);
 
-        clock = new Supplier<Long>() {
-            @Override
-            public Long get() {
-                return System.currentTimeMillis();
-            }
-        };
+        clock = System::currentTimeMillis;
     }
 
     protected abstract C parseQuery(String queryStr) throws InvalidQueryException, IncompatibleQueryException;
@@ -71,7 +66,7 @@ public abstract class RDFStreamProcessor<C, Q> extends BasicStreamProcessor<Stri
     protected abstract BasicSubscription<C, Q, BindingSet> createSubscription(
             int ttl,
             final C sparqlQuery,
-            BiConsumer<BindingSet, Long> consumer) throws IOException;
+            BiConsumer<BindingSet, Long> consumer);
 
     /**
      * Adds a tuple to an internal index, possibly generating new solutions

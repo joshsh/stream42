@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.function.BiConsumer;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * A recursive data structure which indexes tuple-based queries and matches incoming tuples against
@@ -173,12 +174,9 @@ public class QueryIndex<T, C> {
         int removedQueries = 0;
 
         // identify expired queries
-        Collection<Query<T, C>> toRemove = new LinkedList<>();
-        for (Query<T, C> query : rootMetadata.queries) {
-            if (query.isExpired(now)) {
-                toRemove.add(query);
-            }
-        }
+        Collection<Query<T, C>> toRemove = rootMetadata.queries.stream().filter(query ->
+                query.isExpired(now)).collect(Collectors.toCollection(LinkedList::new));
+
         // remove expired queries
         for (Query<T, C> query : toRemove) {
             remove(query);

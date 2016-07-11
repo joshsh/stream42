@@ -25,12 +25,7 @@ public class SimpleDirectedGraph<T> implements DirectedGraph<T> {
             public void accept(final T vertex) {
                 vertices.add(vertex);
 
-                other.forOutEdges(vertex, new Consumer<T>() {
-                    @Override
-                    public void accept(T head) {
-                        addEdge(vertex, head);
-                    }
-                });
+                other.forOutEdges(vertex, head -> addEdge(vertex, head));
             }
         });
     }
@@ -50,9 +45,7 @@ public class SimpleDirectedGraph<T> implements DirectedGraph<T> {
 
     @Override
     public void forVertices(Consumer<T> visitor) {
-        for (T vertex : vertices) {
-            visitor.accept(vertex);
-        }
+        vertices.forEach(visitor::accept);
     }
 
     @Override
@@ -62,9 +55,7 @@ public class SimpleDirectedGraph<T> implements DirectedGraph<T> {
             throw new IllegalArgumentException();
         }
 
-        for (T headVertex : inc) {
-            headVisitor.accept(headVertex);
-        }
+        inc.forEach(headVisitor::accept);
     }
 
     public boolean isFullyConnected() {

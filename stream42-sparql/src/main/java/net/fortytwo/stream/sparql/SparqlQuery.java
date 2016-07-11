@@ -101,8 +101,8 @@ public class SparqlQuery {
 
     private VariableOrConstant<String, Value> toNative(Var v) {
         return v.hasValue()
-                ? new VariableOrConstant<String, Value>(null, v.getValue())
-                : new VariableOrConstant<String, Value>(v.getName(), null);
+                ? new VariableOrConstant<>(null, v.getValue())
+                : new VariableOrConstant<>(v.getName(), null);
     }
 
     /**
@@ -341,7 +341,6 @@ public class SparqlQuery {
                 findPatterns((Filter) n, patterns);
             } else if (n instanceof ProjectionElemList) {
                 // TODO: remind self when these are encountered and why they are ignored
-                //LOGGER.info("ignoring " + n);
             } else if (n instanceof ExtensionElem) {
                 ExtensionElem ee = (ExtensionElem) n;
 

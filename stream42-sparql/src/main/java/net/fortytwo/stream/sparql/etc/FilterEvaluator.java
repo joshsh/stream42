@@ -12,7 +12,7 @@ import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.evaluation.EvaluationStrategy;
 import org.openrdf.query.algebra.evaluation.TripleSource;
-import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
+import org.openrdf.query.algebra.evaluation.impl.SimpleEvaluationStrategy;
 
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
@@ -24,7 +24,7 @@ public class FilterEvaluator {
     public FilterEvaluator(ValueFactory valueFactory) {
         this.valueFactory = valueFactory;
 
-        eval = new EvaluationStrategyImpl(new EmptyTripleSource(), null, null);
+        eval = new SimpleEvaluationStrategy(new EmptyTripleSource(), null, null);
     }
 
     public boolean applyFilter(final Filter f,

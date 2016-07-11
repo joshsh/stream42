@@ -221,10 +221,8 @@ public class SolutionIndex<V> implements Index<Solution<V>> {
     private synchronized boolean removeAllInternal() {
         boolean removed = !allSolutions.isEmpty();
 
-        for (Solution<V> s : allSolutions.keySet()) {
-            // note: non-expiring solutions have no effect on the manager
-            removeFromManager(s);
-        }
+        // note: non-expiring solutions have no effect on the manager
+        allSolutions.keySet().forEach(this::removeFromManager);
         allSolutions.clear();
 
         for (Map<V, Set<Solution<V>>> solutions : solutionsByBinding) {

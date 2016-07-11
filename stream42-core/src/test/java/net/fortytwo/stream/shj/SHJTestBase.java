@@ -5,10 +5,8 @@ import net.fortytwo.stream.model.VariableOrConstant;
 import org.junit.After;
 import org.junit.Before;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -25,20 +23,20 @@ import static org.junit.Assert.assertNull;
 public class SHJTestBase {
 
     protected ExpirationManager<Solution<String>> solutionExpirationManager;
-    protected ExpirationManager<Query<String, String>> queryExpirationManager;
+    private ExpirationManager<Query<String, String>> queryExpirationManager;
 
     private long simTime;
 
-    protected Random random = new Random();
+    protected final Random random = new Random();
 
     protected QueryContext<String, String> context;
 
     protected QueryIndex<String, String> queryIndex;
 
-    private Map<String, Set<CompleteSolution<String, String>>> solutionsByName
+    private final Map<String, Set<CompleteSolution<String, String>>> solutionsByName
             = new HashMap<>();
 
-    protected Index<Solution<String>> noopIndex = new Index<Solution<String>>() {
+    private final Index<Solution<String>> noopIndex = new Index<Solution<String>>() {
         @Override
         public void add(Solution<String> toAdd) {
             // do nothing
@@ -125,8 +123,8 @@ public class SHJTestBase {
         for (int i = 0; i < values.length; i++) {
             String value = values[i];
             pattern[i] = value.startsWith("?")
-                    ? new VariableOrConstant<String, String>(value, null)
-                    : new VariableOrConstant<String, String>(null, value);
+                    ? new VariableOrConstant<>(value, null)
+                    : new VariableOrConstant<>(null, value);
         }
 
         return new TuplePattern<>(pattern);
@@ -137,17 +135,14 @@ public class SHJTestBase {
     }
 
     protected BiConsumer<Map<String, String>, Long> createConsumer(final String name) {
-        return new BiConsumer<Map<String, String>, Long>() {
-            @Override
-            public void accept(Map<String, String> mapping, Long expTime) {
-                Set<CompleteSolution<String, String>> set = solutionsByName.get(name);
-                if (null == set) {
-                    set = new HashSet<>();
-                    solutionsByName.put(name, set);
-                }
-                CompleteSolution<String, String> comp = new CompleteSolution<>(mapping, expTime);
-                set.add(comp);
+        return (mapping, expTime) -> {
+            Set<CompleteSolution<String, String>> set = solutionsByName.get(name);
+            if (null == set) {
+                set = new HashSet<>();
+                solutionsByName.put(name, set);
             }
+            CompleteSolution<String, String> comp = new CompleteSolution<>(mapping, expTime);
+            set.add(comp);
         };
     }
 
@@ -187,18 +182,6 @@ public class SHJTestBase {
             }
             return hc;
         }
-
-        public String debug() {
-            List keyList = new LinkedList();
-            keyList.addAll(mapping.keySet());
-            Collections.sort(keyList);
-            StringBuilder sb = new StringBuilder();
-            for (Object key : keyList) {
-                sb.append(((String) mapping.get(key)).substring(0, 1));
-            }
-
-            return sb.toString() + " --> " + hashCode();
-        }
     }
 
     protected Query<String, String> addQuery(String name, GraphPattern<String, String> pattern) {
@@ -222,24 +205,6 @@ public class SHJTestBase {
             assertNull(sols);
         } else {
             assertNotNull(sols);
-
-            /*
-            System.out.println("### solutions:");
-            for (CompleteSolution<String, String> sol : sols) {
-                System.out.println("\t" + sol.debug());
-            }
-            System.out.println("### solution map:");
-            Map<String, CompleteSolution<String, String>> byDebug = new HashMap<String, CompleteSolution<String, String>>();
-            for (CompleteSolution<String, String> s : sols) {
-                String d = s.debug();
-                CompleteSolution<String, String> existing = byDebug.get(d);
-                if (null != existing && existing != s) {
-                    System.out.println("\t duplicate: " + s + ", "  + existing);
-                } else {
-                    byDebug.put(d, s);
-                }
-            }*/
-
             assertEquals(expectedCount, sols.size());
         }
     }

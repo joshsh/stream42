@@ -29,15 +29,13 @@ import java.util.logging.Level;
  */
 public class SHJSparqlStreamProcessor extends SparqlStreamProcessor<Query<String, Value>> {
 
-    private final ExpirationManager<Solution<Value>> solutionExpirationManager;
-    private final ExpirationManager<Query<String, Value>> queryExpirationManager;
     private final QueryContext<String, Value> context;
     private final QueryIndex<String, Value> queryIndex;
 
     public SHJSparqlStreamProcessor() {
         super();
 
-        queryExpirationManager = new ExpirationManager<Query<String, Value>>() {
+        ExpirationManager<Query<String, Value>> queryExpirationManager = new ExpirationManager<Query<String, Value>>() {
             @Override
             protected long getNow() {
                 return SHJSparqlStreamProcessor.this.getNow();
@@ -45,7 +43,7 @@ public class SHJSparqlStreamProcessor extends SparqlStreamProcessor<Query<String
         };
         queryExpirationManager.setVerbose(true);
 
-        solutionExpirationManager = new ExpirationManager<Solution<Value>>() {
+        ExpirationManager<Solution<Value>> solutionExpirationManager = new ExpirationManager<Solution<Value>>() {
             @Override
             protected long getNow() {
                 return SHJSparqlStreamProcessor.this.getNow();
@@ -79,13 +77,12 @@ public class SHJSparqlStreamProcessor extends SparqlStreamProcessor<Query<String
     }
 
     @Override
-    public void unregister(BasicSubscription<SparqlQuery, Query<String, Value>, BindingSet> subscription) throws IOException {
+    public void unregister(BasicSubscription<SparqlQuery, Query<String, Value>, BindingSet> subscription) {
         queryIndex.remove(subscription.getQuery());
     }
 
     @Override
-    public boolean renew(BasicSubscription<SparqlQuery, Query<String, Value>, BindingSet> subscription, int ttl)
-            throws IOException {
+    public boolean renew(BasicSubscription<SparqlQuery, Query<String, Value>, BindingSet> subscription, int ttl) {
 
         throw new UnsupportedOperationException(
                 "query renewal is not yet supported; remove the query and add a new one");
@@ -108,15 +105,12 @@ public class SHJSparqlStreamProcessor extends SparqlStreamProcessor<Query<String
         final BasicSubscription<SparqlQuery, Query<String, Value>, BindingSet> subscription
                 = new BasicSubscription<>(sparqlQuery, null, null, this);
 
-        BiConsumer<Map<String, Value>, Long> solutionHandler = new BiConsumer<Map<String, Value>, Long>() {
-            @Override
-            public void accept(Map<String, Value> mapping, Long expirationTime) {
-                BindingSet solution = toBindingSet(mapping);
-                try {
-                    handleCandidateSolution(subscription, solution, expirationTime);
-                } catch (IOException e) {
-                    logger.log(Level.WARNING, "failed to handle solution " + solution, e);
-                }
+        BiConsumer<Map<String, Value>, Long> solutionHandler = (mapping, expirationTime1) -> {
+            BindingSet solution = toBindingSet(mapping);
+            try {
+                handleCandidateSolution(subscription, solution, expirationTime1);
+            } catch (IOException e) {
+                logger.log(Level.WARNING, "failed to handle solution " + solution, e);
             }
         };
 

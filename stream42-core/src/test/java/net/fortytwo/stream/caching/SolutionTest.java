@@ -13,7 +13,7 @@ import static org.junit.Assert.assertTrue;
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public class SolutionTest {
-    private long exp = 0;
+    private final long exp = 0;
 
     @Test
     public void testCompatibility() throws Exception {

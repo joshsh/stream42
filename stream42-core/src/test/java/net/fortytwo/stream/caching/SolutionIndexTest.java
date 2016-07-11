@@ -19,7 +19,7 @@ import static org.junit.Assert.assertNull;
  */
 public class SolutionIndexTest {
     private long now;
-    private long exp = 0;
+    private final long exp = 0;
 
     private Query.QueryVariables vars;
     private SolutionIndex<String> index;

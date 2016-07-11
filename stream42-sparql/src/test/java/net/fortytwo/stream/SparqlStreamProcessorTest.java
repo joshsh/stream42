@@ -40,10 +40,10 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
 
     private final String ex = "http://example.org/";
     private final String foaf = "http://xmlns.com/foaf/0.1/";
-    private IRI arthur = vf.createIRI(ex + "arthur");
-    private IRI zaphod = vf.createIRI(ex + "zaphod");
-    private IRI ford = vf.createIRI(ex + "ford");
-    private IRI knows = vf.createIRI(foaf + "knows");
+    private IRI arthur = valueFactory.createIRI(ex + "arthur");
+    private IRI zaphod = valueFactory.createIRI(ex + "zaphod");
+    private IRI ford = valueFactory.createIRI(ex + "ford");
+    private IRI knows = valueFactory.createIRI(foaf + "knows");
 
     @Before
     public void setUp() throws Exception {
@@ -63,11 +63,8 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
     public void testAddLubmQueries() throws Exception {
         CachingSparqlStreamProcessor engine = new CachingSparqlStreamProcessor();
 
-        BiConsumer<BindingSet, Long> bsh = new BiConsumer<BindingSet, Long>() {
-            @Override
-            public void accept(BindingSet result, Long expirationTime) {
-                // Do nothing.
-            }
+        BiConsumer<BindingSet, Long> bsh = (result, expirationTime) -> {
+            // Do nothing.
         };
 
         for (String q : LUBM_QUERIES) {
@@ -83,11 +80,8 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
     public void testInvalidQueries() throws Exception {
         CachingSparqlStreamProcessor engine = new CachingSparqlStreamProcessor();
 
-        BiConsumer<BindingSet, Long> bsh = new BiConsumer<BindingSet, Long>() {
-            @Override
-            public void accept(BindingSet result, Long expirationTime) {
-                // Do nothing.
-            }
+        BiConsumer<BindingSet, Long> bsh = (result, expirationTime) -> {
+            // Do nothing.
         };
 
         for (String q : INVALID_QUERIES) {
@@ -109,11 +103,8 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
     public void testIncompatibleQueries() throws Exception {
         CachingSparqlStreamProcessor engine = new CachingSparqlStreamProcessor();
 
-        BiConsumer<BindingSet, Long> bsh = new BiConsumer<BindingSet, Long>() {
-            @Override
-            public void accept(BindingSet result, Long expirationTime) {
-                // Do nothing.
-            }
+        BiConsumer<BindingSet, Long> bsh = (result, expirationTime) -> {
+            // Do nothing.
         };
 
         for (String q : INCOMPATIBLE_QUERIES) {
@@ -201,12 +192,6 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
         answers = distinctContinuousQueryAnswers(
                 loadData("example.nq"), loadQuery("exponential-join-all-nodistinct.rq"))[0];
 //        assertTrue(answers.size() >= 14);
-        /*
-        System.out.println("continuous:");
-        for (BindingSet bs : answers) {
-            System.out.println("\t" + bs);
-        }
-        */
 
         // There is no simple relationship between SesameStream's and MemoryStore's answers in the presence of loops.
         // SesameStream finds additional correct answers not produced by MemoryStore, but MemoryStore finds additional
@@ -216,12 +201,6 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
         answers = distinctStaticQueryAnswers(
                 loadData("example.nq"), loadQuery("exponential-join-all-nodistinct.rq"))[0];
 //        assertTrue(answers.size() >= 14);
-      /*
-        System.out.println("static:");
-        for (BindingSet bs : answers) {
-            System.out.println("\t" + bs);
-        }
-        */
 
         answers = continuousQueryAnswers(
                 loadData("example.nq"), loadQuery("exponential-join-nodistinct.rq"), false);
@@ -358,7 +337,7 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
         assertTrue(answers.size() >= 5);
         for (BindingSet b : answers) {
             assertNotNull(b.getValue("subject"));
-            assertEquals(vf.createIRI("http://xmlns.com/foaf/0.1/name"), b.getValue("predicate"));
+            assertEquals(valueFactory.createIRI("http://xmlns.com/foaf/0.1/name"), b.getValue("predicate"));
             assertNotNull(b.getValue("object"));
         }
     }

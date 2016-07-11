@@ -27,11 +27,11 @@ public class BasicSubscription<C, Q, S> implements Subscription {
         return Integer.valueOf(nextId++).toString();
     }
 
-    public BasicSubscription(final String id,
-                             final C sparqlQuery,
-                             final Q query,
-                             final BiConsumer<S, Long> consumer,
-                             final BasicStreamProcessor<?, C, Q, ?, S> processor) {
+    private BasicSubscription(final String id,
+                              final C sparqlQuery,
+                              final Q query,
+                              final BiConsumer<S, Long> consumer,
+                              final BasicStreamProcessor<?, C, Q, ?, S> processor) {
         this.id = id;
         this.sparqlQuery = sparqlQuery;
         this.query = query;

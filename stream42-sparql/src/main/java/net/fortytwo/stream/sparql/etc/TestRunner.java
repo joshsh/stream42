@@ -1,14 +1,11 @@
 package net.fortytwo.stream.sparql.etc;
 
-import info.aduna.lang.FileFormat;
+import info.aduna.io.IOUtil;
 import net.fortytwo.stream.StreamProcessor;
 import net.fortytwo.stream.sparql.impl.caching.CachingSparqlStreamProcessor;
-import info.aduna.io.IOUtil;
-import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.model.impl.SimpleValueFactory;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.MalformedQueryException;
-import org.openrdf.query.parser.QueryParser;
-import org.openrdf.query.parser.sparql.SPARQLParser;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
@@ -16,6 +13,7 @@ import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.RDFParserRegistry;
 import org.openrdf.rio.Rio;
+import org.openrdf.rio.helpers.BasicParserSettings;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -63,24 +61,21 @@ public class TestRunner {
         CachingSparqlStreamProcessor engine = new CachingSparqlStreamProcessor();
         String baseIri = "http://example.org/base-iri/";
 
-        BiConsumer<BindingSet, Long> solutionConsumer = new BiConsumer<BindingSet, Long>() {
-            @Override
-            public void accept(final BindingSet result, Long expirationTime) {
-                StringBuilder sb = new StringBuilder("RESULT\t" + System.currentTimeMillis() + "\t"
-                        + expirationTime + "\t");
+        BiConsumer<BindingSet, Long> solutionConsumer = (result, expirationTime) -> {
+            StringBuilder sb = new StringBuilder("RESULT\t" + System.currentTimeMillis() + "\t"
+                    + expirationTime + "\t");
 
-                boolean first = true;
-                for (String n : result.getBindingNames()) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(n).append(":").append(result.getValue(n));
+            boolean first = true;
+            for (String n : result.getBindingNames()) {
+                if (first) {
+                    first = false;
+                } else {
+                    sb.append(", ");
                 }
-
-                System.out.println(sb);
+                sb.append(n).append(":").append(result.getValue(n));
             }
+
+            System.out.println(sb);
         };
 
         for (String f : queryFiles) {
@@ -105,9 +100,9 @@ public class TestRunner {
 
             try (InputStream in = new FileInputStream(new File(f))) {
                 RDFParser p = Rio.createParser(format.get());
-                p.setValueFactory(new ErrorTolerantValueFactory(new ValueFactoryImpl()));
-                p.setStopAtFirstError(false);
-                p.setVerifyData(false);
+                p.setValueFactory(new ErrorTolerantValueFactory(SimpleValueFactory.getInstance()));
+                //p.setStopAtFirstError(false);
+                p.getParserConfig().set(BasicParserSettings.VERIFY_DATATYPE_VALUES, false);
                 p.setRDFHandler(handler);
                 try {
                     p.parse(in, baseIri);

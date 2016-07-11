@@ -19,7 +19,7 @@ public class QueryContext<K, V> {
     }
 
     public static <T> Set<T> newConcurrentSet() {
-        return Collections.newSetFromMap(new HashMap<T, Boolean>());
+        return Collections.newSetFromMap(new HashMap<>());
     }
 
     public void evictExpired() {

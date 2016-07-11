@@ -7,16 +7,17 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ValueFactoryBase;
-import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.model.impl.AbstractValueFactory;
+import org.openrdf.model.impl.SimpleValueFactory;
 
 /**
  * A ValueFactory which will accept bad IRIs (e.g. in input files), replacing them with valid IRIs
  *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public class ErrorTolerantValueFactory extends ValueFactoryBase {
-    private static final IRI GOOD_IRI = new ValueFactoryImpl().createIRI("http://example.org/substitute-for-bad-iri");
+public class ErrorTolerantValueFactory extends AbstractValueFactory {
+    private static final IRI GOOD_IRI = SimpleValueFactory.getInstance()
+            .createIRI("http://example.org/substitute-for-bad-iri");
 
     private final ValueFactory base;
 

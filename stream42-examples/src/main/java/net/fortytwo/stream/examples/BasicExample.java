@@ -4,8 +4,8 @@ import net.fortytwo.stream.Subscription;
 import net.fortytwo.stream.sparql.SparqlStreamProcessor;
 import net.fortytwo.stream.sparql.impl.shj.SHJSparqlStreamProcessor;
 import org.openrdf.model.Statement;
-import org.openrdf.model.impl.StatementImpl;
-import org.openrdf.model.impl.URIImpl;
+import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.SimpleValueFactory;
 import org.openrdf.query.BindingSet;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFParser;
@@ -54,12 +54,8 @@ public class BasicExample {
         int queryTtl = 10 * 60;
 
         // Define a handler for answers to the query.
-        BiConsumer<BindingSet, Long> handler = new BiConsumer<BindingSet, Long>() {
-            @Override
-            public void accept(final BindingSet answer, Long expirationTime) {
+        BiConsumer<BindingSet, Long> handler = (answer, expirationTime) ->
                 System.out.println("found an answer to the query: " + answer + ", expires at " + expirationTime);
-            }
-        };
 
         // Submit the query to the query engine to obtain a subscription.
         Subscription sub = streamProcessor.addQuery(queryTtl, query, handler);
@@ -70,12 +66,15 @@ public class BasicExample {
         // Results derived from this data will never expire.
         int staticTtl = 0;
 
+        // create a factory for RDF values and statements
+        ValueFactory valueFactory = SimpleValueFactory.getInstance();
+
         // Add some static background knowledge.  Alternatively, let Stream42 discover this
         // information as Linked Data (see LinkedDataExample.java).
-        Statement st = new StatementImpl(
-                new URIImpl("http://dbpedia.org/resource/The_Meaning_of_Liff"),
-                new URIImpl("http://dbpedia.org/ontology/author"),
-                new URIImpl("http://dbpedia.org/resource/Douglas_Adams"));
+        Statement st = valueFactory.createStatement(
+                valueFactory.createIRI("http://dbpedia.org/resource/The_Meaning_of_Liff"),
+                valueFactory.createIRI("http://dbpedia.org/ontology/author"),
+                valueFactory.createIRI("http://dbpedia.org/resource/Douglas_Adams"));
         streamProcessor.addInputs(staticTtl, st);
 
         // Now define a finite time-to-live of 30 seconds.

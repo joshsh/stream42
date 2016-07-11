@@ -6,12 +6,12 @@ import net.fortytwo.stream.sparql.RDFStreamProcessor;
 import net.fortytwo.stream.sparql.SparqlStreamProcessor;
 import org.openrdf.model.Statement;
 import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.model.impl.SimpleValueFactory;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.impl.DatasetImpl;
 import org.openrdf.query.impl.EmptyBindingSet;
+import org.openrdf.query.impl.SimpleDataset;
 import org.openrdf.query.parser.ParsedQuery;
 import org.openrdf.query.parser.QueryParser;
 import org.openrdf.query.parser.sparql.SPARQLParser;
@@ -19,6 +19,7 @@ import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.RDFParserRegistry;
 import org.openrdf.rio.Rio;
+import org.openrdf.rio.helpers.BasicParserSettings;
 import org.openrdf.sail.Sail;
 import org.openrdf.sail.SailConnection;
 
@@ -44,7 +45,7 @@ public class SparqlTestBase {
     private final QueryParser queryParser = new SPARQLParser();
     protected Sail sail;
     protected SparqlStreamProcessor queryEngine;
-    protected final ValueFactory vf = new ValueFactoryImpl();
+    protected final ValueFactory valueFactory = SimpleValueFactory.getInstance();
 
     protected final int TUPLE_TTL = 0, QUERY_TTL = 0;
 
@@ -70,7 +71,7 @@ public class SparqlTestBase {
 
         RDFParser p = Rio.createParser(format.get());
 
-        p.setDatatypeHandling(RDFParser.DatatypeHandling.IGNORE);
+        p.getParserConfig().set(BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES, false);
 
         List<Statement> c = new LinkedList<>();
         p.setRDFHandler(new StatementCollector(c));
@@ -85,7 +86,7 @@ public class SparqlTestBase {
     }
 
     protected Set<BindingSet>[] distinctStaticQueryAnswers(final List<Statement> data,
-                                                           final TupleExpr... queries) throws Exception {
+                                                           final TupleExpr... queries) {
         Set<BindingSet>[] answers = new Set[queries.length];
 
         int i = 0;
@@ -102,7 +103,7 @@ public class SparqlTestBase {
                 }
 
                 try (CloseableIteration<? extends BindingSet, QueryEvaluationException> iter
-                             = sc.evaluate(query, new DatasetImpl(), new EmptyBindingSet(), false)) {
+                             = sc.evaluate(query, new SimpleDataset(), new EmptyBindingSet(), false)) {
                     while (iter.hasNext()) {
                         results.add(iter.next());
                     }

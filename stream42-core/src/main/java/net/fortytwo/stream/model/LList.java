@@ -17,8 +17,8 @@ public class LList<T> {
         this.rest = null;
     }
 
-    public LList(final T value,
-                 final LList<T> rest) {
+    private LList(final T value,
+                  final LList<T> rest) {
         this.value = value;
         this.rest = rest;
     }

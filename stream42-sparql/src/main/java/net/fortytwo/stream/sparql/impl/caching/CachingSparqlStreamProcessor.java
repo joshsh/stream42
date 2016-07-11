@@ -48,27 +48,17 @@ public class CachingSparqlStreamProcessor extends SparqlStreamProcessor<Query<Va
         // note: this implementation does not support RDF quads
         queryIndex = new QueryIndex<>(3);
 
-        solutionHandler = new BiConsumer<BasicSubscription<SparqlQuery, Query<Value, ?>, BindingSet>, Bindings<Value>>() {
-            @Override
-            public void accept(final BasicSubscription<SparqlQuery, Query<Value, ?>, BindingSet> subscription,
-                               final Bindings<Value> bindings) {
-                try {
-                    // note: this implementation does not compute an expiration time for solutions
-                    handleCandidateSolution(subscription, toBindingSet(bindings), StreamProcessor.NEVER_EXPIRE);
-                } catch (IOException e) {
-                    logger.log(Level.WARNING, "failed to handle solution " + bindings, e);
-                }
+        solutionHandler = (subscription, bindings) -> {
+            try {
+                // note: this implementation does not compute an expiration time for solutions
+                handleCandidateSolution(subscription, toBindingSet(bindings), StreamProcessor.NEVER_EXPIRE);
+            } catch (IOException e) {
+                logger.log(Level.WARNING, "failed to handle solution " + bindings, e);
             }
         };
 
-        cleanupPolicy = new CleanupPolicy() {
-            @Override
-            public boolean doCleanup(int secondsElapsedSinceLast,
-                                     int queriesAddedSinceLast,
-                                     int statementsAddedSinceLast) {
-                return secondsElapsedSinceLast >= 30;
-            }
-        };
+        cleanupPolicy = (secondsElapsedSinceLast, queriesAddedSinceLast, statementsAddedSinceLast) ->
+                secondsElapsedSinceLast >= 30;
 
         clear();
 
@@ -142,13 +132,12 @@ public class CachingSparqlStreamProcessor extends SparqlStreamProcessor<Query<Va
     }
 
     @Override
-    public void unregister(final BasicSubscription<SparqlQuery, Query<Value, ?>, BindingSet> subscription) throws IOException {
+    public void unregister(final BasicSubscription<SparqlQuery, Query<Value, ?>, BindingSet> subscription) {
         queryIndex.remove((Query<Value, BasicSubscription<SparqlQuery, Query<Value, ?>, BindingSet>>) subscription.getQuery());
     }
 
     @Override
-    public boolean renew(final BasicSubscription<SparqlQuery, Query<Value, ?>, BindingSet> subscription, final int ttl)
-            throws IOException {
+    public boolean renew(final BasicSubscription<SparqlQuery, Query<Value, ?>, BindingSet> subscription, final int ttl) {
 
         if (isActive()) {
             queryIndex.renew((Query<Value, BasicSubscription<SparqlQuery, Query<Value, ?>, BindingSet>>) subscription.getQuery(),

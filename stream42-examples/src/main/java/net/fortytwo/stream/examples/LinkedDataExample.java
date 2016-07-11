@@ -54,14 +54,11 @@ public class LinkedDataExample {
         int queryTtl = 10 * 60;
 
         // Define a handler for answers to the query.
-        BiConsumer<BindingSet, Long> solutionConsumer = new BiConsumer<BindingSet, Long>() {
-            @Override
-            public void accept(final BindingSet answer, Long expirationTime) {
-                System.out.println("answer at " + System.currentTimeMillis() + ": " + answer
-                        + ", valid " + (expirationTime == StreamProcessor.NEVER_EXPIRE
-                        ? "forever" : "until " + expirationTime));
-            }
-        };
+        BiConsumer<BindingSet, Long> solutionConsumer
+                = (answer, expirationTime) -> System.out.println("answer at "
+                + System.currentTimeMillis() + ": " + answer
+                + ", valid " + (expirationTime == StreamProcessor.NEVER_EXPIRE
+                ? "forever" : "until " + expirationTime));
 
         // Submit the query to the query engine to obtain a subscription.
         Subscription sub = queryEngine.addQuery(queryTtl, query, solutionConsumer);

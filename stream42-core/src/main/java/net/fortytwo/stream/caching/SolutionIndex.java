@@ -149,12 +149,11 @@ public class SolutionIndex<T> {
                 while (retrieved.hasNext()) {
                     Solution<T> retrievedSolution = retrieved.next();
 
-                    for (Solution<T> s : solutions) {
-                        if (retrievedSolution.composableWith(s, queryVariables)) {
-                            // note: this incidentally allows us to discard the mutable object provided by the iterator
-                            helper.push(new Solution<>(totalPatterns, retrievedSolution, s));
-                        }
-                    }
+                    // note: this incidentally allows us to discard the mutable object provided by the iterator
+                    solutions.stream().filter(s -> retrievedSolution.composableWith(s, queryVariables)).forEach(s -> {
+                        // note: this incidentally allows us to discard the mutable object provided by the iterator
+                        helper.push(new Solution<>(totalPatterns, retrievedSolution, s));
+                    });
                 }
 
                 while (!helper.isEmpty()) {

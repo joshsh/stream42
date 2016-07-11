@@ -64,11 +64,7 @@ public class GraphPattern<K, V> {
                         for (K key : variableByPattern.get(tail)) {
                             Set<TuplePattern<K, V>> heads = patternByVariable.get(key);
                             if (null != heads) {
-                                for (TuplePattern<K, V> head : heads) {
-                                    if (head != tail) {
-                                        headVisitor.accept(head);
-                                    }
-                                }
+                                heads.stream().filter(head -> head != tail).forEach(headVisitor::accept);
                             }
                         }
                     }

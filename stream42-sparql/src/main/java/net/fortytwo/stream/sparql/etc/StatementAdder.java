@@ -5,8 +5,6 @@ import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
-import java.io.IOException;
-
 /**
  * An <code>RDFHandler</code> which adds handled <code>Statements</code>
  * to a designated {@link net.fortytwo.stream.StreamProcessor}
@@ -36,11 +34,7 @@ public class StatementAdder implements RDFHandler {
     }
 
     public void handleStatement(Statement s) throws RDFHandlerException {
-        try {
-            streamProcessor.addInputs(ttl, s);
-        } catch (IOException e) {
-            throw new RDFHandlerException(e);
-        }
+        streamProcessor.addInputs(ttl, s);
     }
 
     public void handleComment(String s) throws RDFHandlerException {

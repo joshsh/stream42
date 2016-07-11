@@ -14,17 +14,15 @@ import static org.junit.Assert.assertEquals;
  */
 public class SolutionGroupTest {
     private long now;
-    Query.QueryVariables vars;
-    Map<String, String> bindingMap;
-    Bindings<String> bindings;
+    private Bindings<String> bindings;
 
     @Before
     public void setUp() throws Exception {
         now = System.currentTimeMillis();
 
-        vars = new Query.QueryVariables(Arrays.asList("x", "y", "z"));
+        Query.QueryVariables vars = new Query.QueryVariables(Arrays.asList("x", "y", "z"));
 
-        bindingMap = new HashMap<>();
+        Map<String, String> bindingMap = new HashMap<>();
         bindingMap.put("x", "red");
         bindingMap.put("y", "green");
         bindingMap.put("z", "blue");

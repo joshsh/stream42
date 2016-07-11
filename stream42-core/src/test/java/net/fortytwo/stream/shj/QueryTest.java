@@ -491,10 +491,10 @@ public class QueryTest extends SHJTestBase {
 
         /*
         addLessExampleTuples();
-        expectSolutions(consumer1a, 2);
-        expectSolutions(consumer1b, 2);
-        expectSolutions(consumer1c, 2);
-        expectCompleteSolutions("query1", 2);
+        expectIndexSolutions(consumer1a, 2);
+        expectIndexSolutions(consumer1b, 2);
+        expectIndexSolutions(consumer1c, 2);
+        expectQuerySolutions("query1", 2);
         */
     }
 

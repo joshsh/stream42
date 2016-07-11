@@ -10,7 +10,7 @@ import org.openrdf.model.IRI;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.model.impl.SimpleValueFactory;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
@@ -22,7 +22,6 @@ import org.openrdf.query.parser.ParsedQuery;
 import org.openrdf.query.parser.QueryParserUtil;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.sail.SailConnection;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -79,7 +78,7 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
     }
 
     protected SparqlStreamProcessor() {
-        ValueFactory valueFactory = new ValueFactoryImpl();
+        ValueFactory valueFactory = SimpleValueFactory.getInstance();
         filterEvaluator = new FilterEvaluator(valueFactory);
     }
 
@@ -154,12 +153,7 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
         // Results derived from this data will never expire.
         final int staticTtl = 0;
 
-        LinkedDataCache.DataStore store = new LinkedDataCache.DataStore() {
-            @Override
-            public Consumer<Statement> createConsumer(SailConnection sc) {
-                return createRDFSink(staticTtl);
-            }
-        };
+        LinkedDataCache.DataStore store = sc -> createRDFSink(staticTtl);
         cache.setDataStore(store);
 
         if (null != linkedDataService) {
@@ -208,12 +202,7 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
             // require statements from data sources which have already been processed
             clearLinkedDataCache();
 
-            visitQueryPatterns(sub.getQuery(), new Consumer<VariableOrConstant<String, Value>[]>() {
-                @Override
-                public void accept(VariableOrConstant<String, Value>[] pattern) {
-                    triggerLinkedDataCache(pattern);
-                }
-            });
+            visitQueryPatterns(sub.getQuery(), this::triggerLinkedDataCache);
         }
 
         register(sub);
@@ -275,11 +264,7 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
         // remove non-selected variables and project the final names of the selected variables
         for (String key : sparqlQuery.getBindingNames()) {
             Value value = bs.getValue(key);
-            if (null == value) {
-                //if (null == query.getConstants() || !query.getConstants().keySet().contains(key)) {
-                //    throw new IllegalStateException("no value for variable " + key);
-                //}
-            } else {
+            if (null != value) {
                 if (null != sparqlQuery.getExtendedBindingNames()) {
                     String keyp = sparqlQuery.getExtendedBindingNames().get(key);
                     if (null != keyp) {
