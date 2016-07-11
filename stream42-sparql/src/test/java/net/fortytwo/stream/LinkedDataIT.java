@@ -1,12 +1,10 @@
 package net.fortytwo.stream;
 
-import net.fortytwo.stream.sparql.etc.SparqlTestBase;
-import net.fortytwo.stream.sparql.impl.caching.CachingSparqlStreamProcessor;
 import net.fortytwo.flow.NullSink;
-import net.fortytwo.flow.Sink;
 import net.fortytwo.flow.rdf.RDFSink;
 import net.fortytwo.linkeddata.LinkedDataCache;
-import net.fortytwo.ripple.RippleException;
+import net.fortytwo.stream.sparql.etc.SparqlTestBase;
+import net.fortytwo.stream.sparql.impl.caching.CachingSparqlStreamProcessor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,6 +15,7 @@ import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.memory.MemoryStore;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 
 /**
  * @author Joshua Shinavier (http://fortytwo.net)
@@ -40,9 +39,9 @@ public class LinkedDataIT extends SparqlTestBase {
         LinkedDataCache.DataStore store = new LinkedDataCache.DataStore() {
             public RDFSink createInputSink(SailConnection sc) {
                 return new RDFSink() {
-                    public Sink<Statement> statementSink() {
-                        return new Sink<Statement>() {
-                            public void put(final Statement s) throws RippleException {
+                    public Consumer<Statement> statementSink() {
+                        return new Consumer<Statement>() {
+                            public void accept(final Statement s) {
                                 try {
                                     queryEngine.addInputs(TUPLE_TTL, s);
                                 } catch (IOException e) {
@@ -52,11 +51,11 @@ public class LinkedDataIT extends SparqlTestBase {
                         };
                     }
 
-                    public Sink<Namespace> namespaceSink() {
+                    public Consumer<Namespace> namespaceSink() {
                         return new NullSink<>();
                     }
 
-                    public Sink<String> commentSink() {
+                    public Consumer<String> commentSink() {
                         return new NullSink<>();
                     }
                 };

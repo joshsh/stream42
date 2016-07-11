@@ -47,7 +47,7 @@ public abstract class RDFStreamProcessor<C, Q> extends BasicStreamProcessor<Stri
         return active;
     }
 
-    protected void shutDown() {
+    public void shutDown() {
         active = false;
     }
 

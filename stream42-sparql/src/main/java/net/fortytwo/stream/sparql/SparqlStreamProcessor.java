@@ -1,15 +1,14 @@
 package net.fortytwo.stream.sparql;
 
+import net.fortytwo.flow.NullSink;
+import net.fortytwo.flow.rdf.RDFSink;
+import net.fortytwo.linkeddata.LinkedDataCache;
+import net.fortytwo.ripple.RippleException;
 import net.fortytwo.stream.BasicSubscription;
 import net.fortytwo.stream.Subscription;
 import net.fortytwo.stream.model.LList;
 import net.fortytwo.stream.model.VariableOrConstant;
 import net.fortytwo.stream.sparql.etc.FilterEvaluator;
-import net.fortytwo.flow.NullSink;
-import net.fortytwo.flow.Sink;
-import net.fortytwo.flow.rdf.RDFSink;
-import net.fortytwo.linkeddata.LinkedDataCache;
-import net.fortytwo.ripple.RippleException;
 import org.openrdf.model.Namespace;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
@@ -28,7 +27,6 @@ import org.openrdf.query.parser.QueryParserUtil;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.sail.SailConnection;
-import org.openrdf.sail.SailException;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -41,6 +39,9 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 
 /**
+ * An RDF stream processor with SPARQL 1.1 support.
+ * The processor consumes SPARQL queries and RDF statements, producing SPARQL solutions.
+ *
  * @author Joshua Shinavier (http://fortytwo.net)
  */
 public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<SparqlQuery, Q> {
@@ -67,6 +68,12 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
         return reducedModifierCapacity;
     }
 
+    /**
+     * Sets the REDUCED capacity.
+     *
+     * @param capacity the number of distinct solutions which each query subscription can store
+     *                 before it begins recycling them
+     */
     public static void setReducedModifierCapacity(final long capacity) {
         if (capacity < 1) {
             throw new IllegalArgumentException("unreasonable REDUCED capacity value: " + capacity);
@@ -185,8 +192,8 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
 
     @Override
     protected BasicSubscription<SparqlQuery, Q, BindingSet> createSubscription(final int ttl,
-                                                                    final SparqlQuery sparqlQuery,
-                                                                    final BiConsumer<BindingSet, Long> consumer) {
+                                                                               final SparqlQuery sparqlQuery,
+                                                                               final BiConsumer<BindingSet, Long> consumer) {
         long expirationTime = toExpirationTime(ttl, getNow());
 
         List<VariableOrConstant<String, Value>[]> patterns = new LinkedList<>();
@@ -379,25 +386,26 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
     private RDFSink createRDFSink(final int ttl) {
         return new RDFSink() {
             @Override
-            public Sink<Statement> statementSink() {
-                return new Sink<Statement>() {
-                    public void put(final Statement s) throws RippleException {
+            public Consumer<Statement> statementSink() {
+                return new Consumer<Statement>() {
+                    @Override
+                    public void accept(final Statement s) {
                         try {
                             addInputs(ttl, s);
-                        } catch (Throwable t) {
-                            throw new RippleException(t);
+                        } catch (IOException e) {
+                            logger.log(Level.WARNING, "failed to accept input", e);
                         }
                     }
                 };
             }
 
             @Override
-            public Sink<Namespace> namespaceSink() {
+            public Consumer<Namespace> namespaceSink() {
                 return new NullSink<>();
             }
 
             @Override
-            public Sink<String> commentSink() {
+            public Consumer<String> commentSink() {
                 return new NullSink<>();
             }
         };
