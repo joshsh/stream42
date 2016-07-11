@@ -1,16 +1,16 @@
 package net.fortytwo.stream;
 
+import info.aduna.io.IOUtil;
 import net.fortytwo.stream.sparql.RDFStreamProcessor;
 import net.fortytwo.stream.sparql.SparqlStreamProcessor;
 import net.fortytwo.stream.sparql.etc.SparqlTestBase;
 import net.fortytwo.stream.sparql.impl.caching.CachingSparqlStreamProcessor;
 import net.fortytwo.stream.sparql.impl.shj.SHJSparqlStreamProcessor;
-import info.aduna.io.IOUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.openrdf.model.IRI;
 import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.sail.memory.MemoryStore;
@@ -40,10 +40,10 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
 
     private final String ex = "http://example.org/";
     private final String foaf = "http://xmlns.com/foaf/0.1/";
-    private URI arthur = vf.createURI(ex + "arthur");
-    private URI zaphod = vf.createURI(ex + "zaphod");
-    private URI ford = vf.createURI(ex + "ford");
-    private URI knows = vf.createURI(foaf + "knows");
+    private IRI arthur = vf.createIRI(ex + "arthur");
+    private IRI zaphod = vf.createIRI(ex + "zaphod");
+    private IRI ford = vf.createIRI(ex + "ford");
+    private IRI knows = vf.createIRI(foaf + "knows");
 
     @Before
     public void setUp() throws Exception {
@@ -358,7 +358,7 @@ public class SparqlStreamProcessorTest extends SparqlTestBase {
         assertTrue(answers.size() >= 5);
         for (BindingSet b : answers) {
             assertNotNull(b.getValue("subject"));
-            assertEquals(vf.createURI("http://xmlns.com/foaf/0.1/name"), b.getValue("predicate"));
+            assertEquals(vf.createIRI("http://xmlns.com/foaf/0.1/name"), b.getValue("predicate"));
             assertNotNull(b.getValue("object"));
         }
     }

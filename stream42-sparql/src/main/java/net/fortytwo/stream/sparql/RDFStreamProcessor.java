@@ -150,7 +150,7 @@ public abstract class RDFStreamProcessor<C, Q> extends BasicStreamProcessor<Stri
     }
 
     @Override
-    public boolean addInputs(final int ttl, final Statement... inputs) throws IOException {
+    public boolean addInputs(final int ttl, final Statement... inputs) {
         boolean changed = false;
         for (Statement s : inputs) {
             incrementStatements();

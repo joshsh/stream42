@@ -7,7 +7,7 @@
     <artifactId>stream42-core</artifactId>
     <version>1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>SesameStream Core</name>
+    <name>Stream42 Core</name>
 
     <parent>
         <groupId>net.fortytwo.stream</groupId>

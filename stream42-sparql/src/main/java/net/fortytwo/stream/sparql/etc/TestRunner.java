@@ -1,5 +1,6 @@
 package net.fortytwo.stream.sparql.etc;
 
+import info.aduna.lang.FileFormat;
 import net.fortytwo.stream.StreamProcessor;
 import net.fortytwo.stream.sparql.impl.caching.CachingSparqlStreamProcessor;
 import info.aduna.io.IOUtil;
@@ -13,6 +14,7 @@ import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
+import org.openrdf.rio.RDFParserRegistry;
 import org.openrdf.rio.Rio;
 
 import java.io.BufferedReader;
@@ -23,6 +25,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 
 /**
@@ -58,7 +61,7 @@ public class TestRunner {
             throws IOException, MalformedQueryException, StreamProcessor.IncompatibleQueryException, RDFHandlerException, StreamProcessor.InvalidQueryException {
 
         CachingSparqlStreamProcessor engine = new CachingSparqlStreamProcessor();
-        String baseUri = "http://example.org/base-uri/";
+        String baseIri = "http://example.org/base-iri/";
 
         BiConsumer<BindingSet, Long> solutionConsumer = new BiConsumer<BindingSet, Long>() {
             @Override
@@ -91,29 +94,26 @@ public class TestRunner {
         for (String f : dataFiles) {
             System.out.println("RUN\t" + System.currentTimeMillis() + "\tadding data file " + f);
 
-            RDFFormat format = RDFFormat.forFileName(f);
+            Optional<RDFFormat> format = RDFParserRegistry.getInstance().getFileFormatForFileName(f);
 
-            if (null == format) {
+            if (!format.isPresent()) {
                 System.err.println("no RDF format matching file name " + f);
                 continue;
             }
 
             RDFHandler handler = engine.createRDFHandler(TUPLE_TTL);
 
-            InputStream in = new FileInputStream(new File(f));
-            try {
-                RDFParser p = Rio.createParser(format);
+            try (InputStream in = new FileInputStream(new File(f))) {
+                RDFParser p = Rio.createParser(format.get());
                 p.setValueFactory(new ErrorTolerantValueFactory(new ValueFactoryImpl()));
                 p.setStopAtFirstError(false);
                 p.setVerifyData(false);
                 p.setRDFHandler(handler);
                 try {
-                    p.parse(in, baseUri);
+                    p.parse(in, baseIri);
                 } catch (RDFParseException e) {
                     System.err.println("RUN ERROR: parse error: " + e.getMessage());
                 }
-            } finally {
-                in.close();
             }
         }
 
@@ -123,15 +123,12 @@ public class TestRunner {
 
     private static List<String> getLines(final String fileName) throws IOException {
         List<String> lines = new LinkedList<>();
-        InputStream in = new FileInputStream(new File(fileName));
-        try {
+        try (InputStream in = new FileInputStream(new File(fileName))) {
             BufferedReader b = new BufferedReader(new InputStreamReader(in));
             String line;
             while (null != (line = b.readLine())) {
                 lines.add(line.trim());
             }
-        } finally {
-            in.close();
         }
 
         return lines;
