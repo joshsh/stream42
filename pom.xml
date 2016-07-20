@@ -11,10 +11,10 @@
 
     <groupId>net.fortytwo.stream</groupId>
     <artifactId>stream42-all</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
     <packaging>pom</packaging>
     <name>Stream42</name>
-    <description>data stream processor for graphs</description>
+    <description>continuous query processor for graph tuple streams</description>
     <url>https://github.com/joshsh/stream42</url>
 
     <issueManagement>
@@ -49,7 +49,7 @@
         <ripple.version>1.4</ripple.version>
         <sesame.version>4.1.2</sesame.version>
         <sesametools.version>1.10</sesametools.version>
-        <stream42.version>1.1-SNAPSHOT</stream42.version>
+        <stream42.version>1.1</stream42.version>
     </properties>
 
     <modules>
@@ -84,7 +84,7 @@
                                 <rules>
                                     <DependencyConvergence />
                                     <requireJavaVersion>
-                                        <version>1.8</version>
+                                        <version>[1.8,)</version>
                                     </requireJavaVersion>
                                 </rules>
                             </configuration>
