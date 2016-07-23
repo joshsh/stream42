@@ -104,7 +104,7 @@ For projects which use Maven, Stream42 snapshots and release packages can be imp
     <dependency>
         <groupId>net.fortytwo.stream</groupId>
         <artifactId>stream42-sparql</artifactId>
-        <version>1.1-SNAPSHOT</version>
+        <version>1.1</version>
     </dependency>
 ```
 
