@@ -317,21 +317,8 @@ public abstract class SparqlStreamProcessor<Q> extends RDFStreamProcessor<Sparql
             Value object = tuple[2];
 
             if (subject instanceof IRI && object instanceof IRI) {
-                boolean subjectExists, objectExists;
-                try {
-                    subjectExists = null != linkedDataCache.peek((IRI) subject, linkedDataCache.getSailConnection());
-                    objectExists = null != linkedDataCache.peek((IRI) object, linkedDataCache.getSailConnection());
-                } catch (IOException e) {
-                    logger.log(Level.WARNING, "failed to dereference (" + subject + "," + object + "): "
-                            + e.getMessage());
-                    return;
-                }
-
-                if (subjectExists && !objectExists) {
-                    indexLinkedDataIri((IRI) object);
-                } else if (objectExists && !subjectExists) {
-                    indexLinkedDataIri((IRI) subject);
-                }
+                indexLinkedDataIri((IRI) subject);
+                indexLinkedDataIri((IRI) object);
             }
         }
     }
