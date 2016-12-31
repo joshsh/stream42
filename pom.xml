@@ -11,7 +11,7 @@
 
     <groupId>net.fortytwo.stream</groupId>
     <artifactId>stream42-all</artifactId>
-    <version>1.1</version>
+    <version>1.2</version>
     <packaging>pom</packaging>
     <name>Stream42</name>
     <description>continuous query processor for graph tuple streams</description>
@@ -46,10 +46,10 @@
 
     <properties>
         <junit.version>4.12</junit.version>
-        <ripple.version>1.4</ripple.version>
+        <ripple.version>1.5</ripple.version>
         <sesame.version>4.1.2</sesame.version>
         <sesametools.version>1.10</sesametools.version>
-        <stream42.version>1.1</stream42.version>
+        <stream42.version>1.2</stream42.version>
     </properties>
 
     <modules>
